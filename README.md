@@ -39,3 +39,5 @@ CREATE TABLE IF NOT EXISTS vac_crud.usuarios(
 	status INT(1) NULL DEFAULT 1
 );
 </code>
+
+## Luego guíate del flujo del index.php
