@@ -4,11 +4,11 @@
 	 */
 	class usuarios extends database
 	{
-		private $table	='usuarios';
+		private $table	='usuarios';//este siempre debe ser el NOMBRE de la tabla
 		private $table0	='';
 		private $table1	='';
 		private $table2	='';
-		private $actio	='usuarios.php';
+		private $actio	='usuarios.php';//este siempre debe ser el NOMBRE de la tabla
 		private $detail	='detalle/?p=';
 		private $tid	="id_u";
 		private $tid1	="";

@@ -11,8 +11,8 @@
 	$json = new stdClass();
 	//-----------------------------------
 		$_tbl = new stdClass();
-		$_tbl->tname = $cls['cl1'];
-		$_tbl->tid = 'id_u';
+		$_tbl->tname = ''.$cls['cl1'];//este siempre debe ser el NOMBRE de la tabla
+		$_tbl->tid = 'id_u';//este siempre debe de ser el ID PRIMARY KEY de la tabla
 		$_tbl->pid = 0;
 		$_tbl->success = 'add';
 		$_tbl->danger = 'no'.$_tbl->success;
@@ -27,8 +27,8 @@
 			$data = new stdClass();
 			//-----------------------------------
 			$data->inf = $_cl1->listar($rid,$uid,$url);
-			$data->edit = $_cl1->list_edit($rid,$uid,$url);
-			$_SESSION['list_drop'] = $data->drop = $_cl1->list_drop($rid,$uid,$url);
+			$data->edit = $_cl1->list_edit($rid,$uid,$url);//estos son solo para el index de la muestra, normalmente no irian
+			$_SESSION['list_drop'] = $data->drop = $_cl1->list_drop($rid,$uid,$url);//estos son solo para el index de la muestra, normalmente no irian
 			//-----------------------------------
 			return $data;
 		}
