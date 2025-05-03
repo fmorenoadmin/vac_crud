@@ -16,7 +16,7 @@
 Ejemplos de CRUD completo usando la metodología VAC
 En el Archivo index.php<br>Te muestro una lista completa del CRUD completo usando mi metodología
 
-## Crea la Base de datos:
+## Primero Crea la Base de datos:
 
 <code>
 /*--------------------------------------------*/
@@ -39,7 +39,3 @@ CREATE TABLE IF NOT EXISTS vac_crud.usuarios(
 	status INT(1) NULL DEFAULT 1
 );
 </code>
-
-## Listar HTML
-
-<code></code>
