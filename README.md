@@ -41,3 +41,7 @@ CREATE TABLE IF NOT EXISTS vac_crud.usuarios(
 </code>
 
 ## Luego guíate del flujo del index.php
+
+<p align="center">
+	<img src="assets/img/logolargo.jpg" height="320px" title="Icono">
+</p>
