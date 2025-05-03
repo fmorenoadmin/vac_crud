@@ -18,8 +18,7 @@ En el Archivo index.php<br>Te muestro una lista completa del CRUD completo usand
 
 ## Crea la Base de datos:
 
-<code>
-/*--------------------------------------------*/
+<code>/*--------------------------------------------*/
 CREATE DATABASE IF NOT EXISTS vac_crud;
 /*--------------------------------------------*/
 CREATE TABLE IF NOT EXISTS vac_crud.usuarios(
@@ -37,5 +36,27 @@ CREATE TABLE IF NOT EXISTS vac_crud.usuarios(
 	drop_at DATETIME NULL DEFAULT NULL,
 	id_drop INT NULL DEFAULT 0,
 	status INT(1) NULL DEFAULT 1
-);
-</code>
+);</code>
+
+## Listar HTML
+
+<code><?php
+    if(isset($_SESSION)){ }else{ session_start(); }
+    //------------------------------------------------
+    $rut='./';
+    //------------------------------------------------
+    require_once($rut.'config/constant.php');
+    //------------------------------------------------
+    $pagina = 'Visualizador de Código';
+    $action = 'usuarios.php';
+    //------------------------------------------------
+    require_once($rut.DIRACT.$action);
+    $data = index($rut,$rid,$uid,$location);
+    //------------------------------------------------
+    $inf = $data->inf;
+?>
+<div class="row">
+    <div class="col-sm-12" style="overflow: auto;">
+        <table class="table table-bordered table-hover table-info"><?= $inf->inf; ?></table>
+    </div>
+</div></code>
