@@ -14,5 +14,4 @@
 
 # vac_crud
 Ejemplos de CRUD completo usando la metodología VAC
-
-<p>En el Archivo index.php<br>Te muestro una lista completa del CRUD completo usando mi metodología</p>
+En el Archivo index.php<br>Te muestro una lista completa del CRUD completo usando mi metodología
