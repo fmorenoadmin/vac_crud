@@ -1,5 +1,5 @@
 <p align="center">
-	<img src="https://archivos.sistemasongoku.com/fmoreno_7X7KyN5phPGy/imagenes/logo.jpg" height="320px" title="Icono">
+	<img src="assets/img/logo.jpg" height="320px" title="Icono">
 </p>
 
 [![Canal de GitHub](https://img.shields.io/badge/Canal-GitHub-black)](https://github.com/fmorenoadmin)
