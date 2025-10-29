@@ -31,3 +31,17 @@ CREATE TABLE IF NOT EXISTS vac_crud.tipo_usuarios(
 	id_drop INT NULL DEFAULT 0,
 	status INT(1) NULL DEFAULT 1
 );
+/*--------------------------------------------*/
+ALTER TABLE vac_crud.usuarios
+	ADD COLUMN id_tu INT NULL DEFAULT 0 AFTER id_u
+;
+/*--------------------------------------------*/
+CREATE VIEW vac_crud.view_users_all AS
+	SELECT 
+		u.*,
+		tu.nombre AS nombre_tipo
+	FROM vac_crud.usuarios u
+		INNER JOIN vac_crud.tipo_usuarios tu ON u.id_tu=tu.id_tu
+	WHERE u.status<>2
+;
+/*--------------------------------------------*/

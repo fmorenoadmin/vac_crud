@@ -6,6 +6,7 @@
 	$cls = array(
 		"dbs"	=>	'database',
 		"cl1"	=>	'usuarios',
+		"cl2"	=>	'tipo_usuarios',
 	);
 	//-----------------------------------
 	$json = new stdClass();
@@ -22,13 +23,17 @@
 			global $cls;
 			require($rut.DIRCLA.$cls['dbs'].'.php');
 			require_once($rut.DIRCLA.$cls['cl1'].'.php');
+			require_once($rut.DIRCLA.$cls['cl2'].'.php');
 			$_dbs = new $cls['dbs']();
 			$_cl1 = new $cls['cl1']();
+			$_cl2 = new $cls['cl2']();
 			$data = new stdClass();
 			//-----------------------------------
 			$data->inf = $_cl1->listar($rid,$uid,$url);
 			$data->edit = $_cl1->list_edit($rid,$uid,$url);//estos son solo para el index de la muestra, normalmente no irian
 			$_SESSION['list_drop'] = $data->drop = $_cl1->list_drop($rid,$uid,$url);//estos son solo para el index de la muestra, normalmente no irian
+			//-----------------------------------
+			$data->cboTU = $_cl2->cbo($rid);
 			//-----------------------------------
 			return $data;
 		}
@@ -36,13 +41,17 @@
 			global $cls,$_tbl;
 			require($rut.DIRCLA.$cls['dbs'].'.php');
 			require_once($rut.DIRCLA.$cls['cl1'].'.php');
+			require_once($rut.DIRCLA.$cls['cl2'].'.php');
 			$_dbs = new $cls['dbs']();
 			$_cl1 = new $cls['cl1']();
+			$_cl2 = new $cls['cl2']();
 			$data = new stdClass();
 			//-----------------------------------
 			$_tbl->pid = $pid;
 			//-----------------------------------
 			$data->call = $_cl1->db_get_id(null,$_tbl);
+			//-----------------------------------
+			$data->cboTU = $_cl2->cbo($rid);
 			//-----------------------------------
 			return $data;
 		}
@@ -69,6 +78,7 @@
 				$_cl1 = new $cls['cl1']();
 				//-----------------------------------
 				$add = array(
+					"id_tu" => intval(base64_decode($_POST['id_tu'])),
 					"nombres" => $_dbs->custom_escape_string($_POST['nombres']),
 					"apellidos" => $_dbs->custom_escape_string($_POST['apellidos']),
 					"usuario" => $_dbs->custom_escape_string($_POST['usuario']),
@@ -116,6 +126,7 @@
 				$_tbl->danger = 'no'.$_tbl->success;
 				//----------------------------------------
 				$edit = array(
+					"id_tu" => intval(base64_decode($_POST['id_tu'])),
 					"nombres" => $_dbs->custom_escape_string($_POST['nombres']),
 					"apellidos" => $_dbs->custom_escape_string($_POST['apellidos']),
 					"usuario" => $_dbs->custom_escape_string($_POST['usuario']),

@@ -13,6 +13,14 @@
 						<div class="row">
 							<div class="col-sm-12">
 								<div class="form-group">
+									<label for="nombres">Tipo de Usuario</label>
+									<select name="id_tu" id="id_tu" class="form-control"><?= $data->cboTU; ?></select>
+								</div>
+							</div>
+						</div>
+						<div class="row">
+							<div class="col-sm-12">
+								<div class="form-group">
 									<label for="nombres">Nombres</label>
 									<input type="text" class="form-control" id="nombres" name="nombres">
 								</div>

@@ -75,7 +75,7 @@
 				//--------------------------------
 				$inf.='<option value="'.base64_encode(0).'">Seleccione al Cliente/Proveedor:</option>';
 				//--------------------------------
-				$sql = "SELECT * FROM ".$this->table1." WHERE status=1 ;";
+				$sql = "SELECT * FROM ".$this->table." WHERE status=1 ;";
 				//--------------------------------
 				$res = $this->db_exec($sql);
 				if ($res->result==true && $res->cant > 0) {

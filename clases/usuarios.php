@@ -5,7 +5,7 @@
 	class usuarios extends database
 	{
 		private $table	='usuarios';//este siempre debe ser el NOMBRE de la tabla
-		private $table0	='';
+		private $view	='view_users_all';
 		private $table1	='';
 		private $table2	='';
 		private $actio	='usuarios.php';//este siempre debe ser el NOMBRE de la tabla
@@ -103,6 +103,7 @@
 						$inf.='<th><i class="fas fa-list-ol"></i></th>';
 						$inf.='<th><i class="fas fa-users-cog"></i></th>';
 						$inf.='<th><i class="fas fa-id-badge"></i></th>';
+						$inf.='<th>Tipo de Usuario</th>';
 						$inf.='<th>Nombres</th>';
 						$inf.='<th>Apellidos</th>';
 						$inf.='<th>Usuario</th>';
@@ -114,7 +115,7 @@
 					$inf.='</tr>';
 				$inf.='</thead>';
 				$inf.='<tbody style="width: 100%;">';
-					$sql = "SELECT * FROM {$this->table} WHERE status<>2 ORDER BY {$this->tid} DESC ;";
+					$sql = "SELECT * FROM {$this->view} WHERE status<>2 ORDER BY {$this->tid} DESC ;";
 					//--------------------------------
 					$res = $this->db_exec($sql);
 					if ($res->result==true && $res->cant > 0) {
@@ -139,6 +140,7 @@
 										$inf .= '</button>';
 									}
 								$inf.='</td>';
+								$inf.='<td>'.$row['nombre_tipo'].'</td>';
 								$inf.='<td>'.$row['nombres'].'</td>';
 								$inf.='<td>'.$row['apellidos'].'</td>';
 								$inf.='<td>'.$row['usuario'].'</td>';

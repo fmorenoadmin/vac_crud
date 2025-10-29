@@ -30,6 +30,12 @@
             </div>
             <div class="card-body">
                 <div class="row">
+                    <div class="col-sm-12">
+                        <div class="form-group">
+                            <label for="nombres">Tipo de Usuario</label>
+                            <select name="id_tu" id="id_tu" class="form-control"><?= $data->cboTU; ?></select>
+                        </div>
+                    </div>
                     <div class="col-sm-6">
                         <div class="form-group">
                             <label for="nombres">Nombres</label>
@@ -74,5 +80,10 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+        var id_tu = '<?= base64_encode($call->id_tu); ?>';
+        //---------------------------------------
+        $("#id_tu").val(id_tu);
+    </script>
 </body>
 </html>
