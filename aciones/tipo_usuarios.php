@@ -27,8 +27,6 @@
 			$data = new stdClass();
 			//-----------------------------------
 			$data->inf = $_cl1->listar($rid,$uid,$url);
-			$data->edit = $_cl1->list_edit($rid,$uid,$url);//estos son solo para el index de la muestra, normalmente no irian
-			$_SESSION['list_drop'] = $data->drop = $_cl1->list_drop($rid,$uid,$url);//estos son solo para el index de la muestra, normalmente no irian
 			//-----------------------------------
 			return $data;
 		}

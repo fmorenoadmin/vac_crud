@@ -40,94 +40,19 @@
 </head>
 <body>
 	<div class="container-fluid">
-		<div class="accordion" id="codigoAccordion">
-			<div class="card">
-				<div class="card-header" id="headingListar">
-					<h2 class="mb-0">
-						<button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseListar" aria-expanded="true" aria-controls="collapseListar">
-							1.- Listar
-						</button>
-					</h2>
-				</div>
-				<div id="collapseListar" class="collapse show" aria-labelledby="headingListar" data-parent="#codigoAccordion">
-					<div class="card-body">
-						<div class="row">
-							<div class="col-sm-4"></div>
-							<div class="col-sm-4 text-center"><h3 class="title">Resultado HTML</h3></div>
-							<div class="col-sm-4"></div>
-							<hr>
-							<div class="col-sm-12" style="overflow: auto;">
-								<table id="listaDatos1" class="table table-bordered table-hover table-info"><?= $inf->inf; ?></table>
-							</div>
-						</div>
-					</div>
-				</div>
+		<div class="row">
+			<div class="col-sm-4"></div>
+			<div class="col-sm-4 text-center"><h3 class="title"><?= $pagina; ?></h3></div>
+			<div class="col-sm-4">
+				<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#nuevo">
+					Agregar <?= $singlr; ?>
+				</button>
 			</div>
-			<div class="card">
-				<div class="card-header" id="headingAgregar">
-					<h2 class="mb-0">
-						<button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseAgregar" aria-expanded="true" aria-controls="collapseAgregar">
-							2.- Agregar
-						</button>
-					</h2>
-				</div>
-				<div id="collapseAgregar" class="collapse" aria-labelledby="headingAgregar" data-parent="#codigoAccordion">
-					<div class="card-body">
-						<div class="row">
-							<div class="col-sm-4"></div>
-							<div class="col-sm-4 text-center"><h3 class="title">Resultado HTML</h3></div>
-							<div class="col-sm-4"></div>
-							<hr>
-							<div class="col-sm-12" style="overflow: auto;">
-								<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#nuevo">
-									Agregar <?= $singlr; ?>
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="card">
-				<div class="card-header" id="headingEditar">
-					<h2 class="mb-0">
-						<button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseEditar" aria-expanded="false" aria-controls="collapseEditar">
-							3.- Editar
-						</button>
-					</h2>
-				</div>
-				<div id="collapseEditar" class="collapse" aria-labelledby="headingEditar" data-parent="#codigoAccordion">
-					<div class="card-body">
-						<div class="row">
-							<div class="col-sm-4"></div>
-							<div class="col-sm-4 text-center"><h3 class="title">Acciones de la tabla HTML:<br>Editar</h3></div>
-							<div class="col-sm-4"></div>
-							<hr>
-							<div class="col-sm-12" style="overflow: auto;">
-								<table class="table table-bordered table-hover table-info"><?= $data->edit->inf; ?></table>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="card">
-				<div class="card-header" id="headingEliminar">
-					<h2 class="mb-0">
-						<button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseEliminar" aria-expanded="false" aria-controls="collapseEliminar">
-							4.- Activar / Desactivar / Eliminar
-						</button>
-					</h2>
-				</div>
-				<div id="collapseEliminar" class="collapse" aria-labelledby="headingEliminar" data-parent="#codigoAccordion">
-					<div class="card-body">
-						<div class="row">
-							<div class="col-sm-4"></div>
-							<div class="col-sm-4 text-center"><h3 class="title">Acciones de la tabla HTML:<br>Eliminar - Activar - Desactivar</h3></div>
-							<div class="col-sm-4"></div>
-							<hr>
-							<div class="col-sm-12" style="overflow: auto;">
-								<table class="table table-bordered table-hover table-info"><?= $data->drop->inf; ?></table>
-							</div>
-						</div>
+			<hr>
+			<div class="col-sm-12" style="overflow: auto;">
+				<div class="row">
+					<div class="col-sm-12" style="overflow: auto;">
+						<table id="listaDatos1" class="table table-bordered table-hover table-info"><?= $inf->inf; ?></table>
 					</div>
 				</div>
 			</div>
