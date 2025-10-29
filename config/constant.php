@@ -11,6 +11,7 @@ define('SCHU', '_qas');
 //---------------------------------------
 define('DB_TYPE', 'mysqli_');
 //define('DB_TYPE', 'pg_');
+//define('DB_TYPE', 'sqlsrv_');
 //---------------------------------------
 if (SCHU=='_qas') {
 	define('__DIRIMG__', $_SERVER['DOCUMENT_ROOT']."/vac_crud/assets/img/");//ruta global donde se almacenan los archivos

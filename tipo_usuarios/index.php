@@ -1,12 +1,13 @@
 <?php
 	if(isset($_SESSION)){ }else{ session_start(); }
 	//------------------------------------------------
-	$rut='./';
+	$rut='../';//a que nivel de raiz me encuentro
 	//------------------------------------------------
 	require_once($rut.'config/constant.php');
 	//------------------------------------------------
-	$pagina = 'Visualizador de Código';
-	$action = 'usuarios.php';
+	$pagina = 'Tipos de Usuarios';
+	$singlr = 'Tipo de Usuario';
+	$action = 'tipo_usuarios.php';
 	//------------------------------------------------
 	require_once($rut.DIRACT.$action);
 	$data = index($rut,$rid,$uid,$location);
@@ -41,32 +42,6 @@
 	<div class="container-fluid">
 		<div class="accordion" id="codigoAccordion">
 			<div class="card">
-				<div class="card-header" id="headingData">
-					<h2 class="mb-0">
-						<button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseData" aria-expanded="false" aria-controls="collapseData">
-							Primero revisa esto: Base de Datos / Constantes
-						</button>
-					</h2>
-				</div>
-				<div id="collapseData" class="collapse" aria-labelledby="headingData" data-parent="#codigoAccordion">
-					<div class="card-body">
-						<div class="row">
-							<a href="https://localhost/phpmyadmin" class="btn btn-block btn-link" target="_blank">Ir a PHPmyadmin</a>
-						</div>
-						<div class="row">
-							<div class="col-sm-6">
-								<h5>Crea la Base de datos</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'database.sql'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-6">
-								<h5>Constantes</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'config/constant.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="card">
 				<div class="card-header" id="headingListar">
 					<h2 class="mb-0">
 						<button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseListar" aria-expanded="true" aria-controls="collapseListar">
@@ -76,20 +51,6 @@
 				</div>
 				<div id="collapseListar" class="collapse show" aria-labelledby="headingListar" data-parent="#codigoAccordion">
 					<div class="card-body">
-						<div class="row">
-							<div class="col-sm-4">
-								<h5>Vista HTML</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/list_html.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Acción PHP</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/list_action.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Clase PHP</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/list_clase.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-						</div>
 						<div class="row">
 							<div class="col-sm-4"></div>
 							<div class="col-sm-4 text-center"><h3 class="title">Resultado HTML</h3></div>
@@ -113,27 +74,13 @@
 				<div id="collapseAgregar" class="collapse" aria-labelledby="headingAgregar" data-parent="#codigoAccordion">
 					<div class="card-body">
 						<div class="row">
-							<div class="col-sm-4">
-								<h5>Vista HTML</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/add_html.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Acción PHP</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/add_action.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Resultado PHP</h5>
-								<div class="code-container"><pre><code><?= htmlspecialchars(json_encode($sms, JSON_PRETTY_PRINT)); ?></code></pre></div>
-							</div>
-						</div>
-						<div class="row">
 							<div class="col-sm-4"></div>
 							<div class="col-sm-4 text-center"><h3 class="title">Resultado HTML</h3></div>
 							<div class="col-sm-4"></div>
 							<hr>
 							<div class="col-sm-12" style="overflow: auto;">
 								<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#nuevo">
-									Agregar Usuario
+									Agregar <?= $singlr; ?>
 								</button>
 							</div>
 						</div>
@@ -159,20 +106,6 @@
 								<table class="table table-bordered table-hover table-info"><?= $data->edit->inf; ?></table>
 							</div>
 						</div>
-						<div class="row">
-							<div class="col-sm-4">
-								<h5>Vista HTML</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/edit_html.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Acción PHP</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/edit_action.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Resultado PHP</h5>
-								<div class="code-container"><pre><code><?= htmlspecialchars(json_encode($sms, JSON_PRETTY_PRINT)); ?></code></pre></div>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -195,20 +128,6 @@
 								<table class="table table-bordered table-hover table-info"><?= $data->drop->inf; ?></table>
 							</div>
 						</div>
-						<div class="row">
-							<div class="col-sm-4">
-								<h5>Vista HTML</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/drop_html.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Acción PHP</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'codes/drop_action.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
-							</div>
-							<div class="col-sm-4">
-								<h5>Resultado PHP</h5>
-								<div class="code-container"><pre><code><?= htmlspecialchars(json_encode($sms, JSON_PRETTY_PRINT)); ?></code></pre></div>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -217,6 +136,6 @@
 	<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
 	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-	<?php include_once($rut.'codes/modals.php'); ?>
+	<?php include_once($rut.'codes/modals_tipo_usuarios.php'); ?>
 </body>
 </html>

@@ -2,15 +2,15 @@
 	/**
 	 * 
 	 */
-	class usuarios extends database
+	class tipo_usuarios extends database
 	{
-		private $table	='usuarios';//este siempre debe ser el NOMBRE de la tabla
+		private $table	='tipo_usuarios';//este siempre debe ser el NOMBRE de la tabla
 		private $table0	='';
 		private $table1	='';
 		private $table2	='';
-		private $actio	='usuarios.php';//este siempre debe ser el NOMBRE de la tabla
+		private $actio	='tipo_usuarios.php';//este siempre debe ser el NOMBRE de la tabla
 		private $detail	='detalle/?p=';
-		private $tid	="id_u";
+		private $tid	="id_tu";
 		private $tid1	="";
 		private $tid2	="";
 		//----------------------------------
@@ -80,7 +80,7 @@
 				$res = $this->db_exec($sql);
 				if ($res->result==true && $res->cant > 0) {
 					while ($row = $fc_assoc($res->res)){
-						$inf .= '<option value="'.base64_encode($row[$this->tid]).'">'.$row['nombre_tipo'].' - '.$row['id_int'].' - '.$row['nombre_comp'].'</option>';
+						$inf .= '<option value="'.base64_encode($row[$this->tid]).'">'.$row['nombre'].'</option>';
 					}
 					//--------------------------------
 					$fc_fre_r($res->res);
@@ -103,10 +103,7 @@
 						$inf.='<th><i class="fas fa-list-ol"></i></th>';
 						$inf.='<th><i class="fas fa-users-cog"></i></th>';
 						$inf.='<th><i class="fas fa-id-badge"></i></th>';
-						$inf.='<th>Nombres</th>';
-						$inf.='<th>Apellidos</th>';
-						$inf.='<th>Usuario</th>';
-						$inf.='<th>Correo</th>';
+						$inf.='<th>Nombre</th>';
 						$inf.='<th>Observaciones</th>';
 						$inf.='<th>Creado</th>';
 						$inf.='<th>Editado</th>';
@@ -124,7 +121,7 @@
 						while ($row = $fc_assoc($res->res)) {
 							$status = $row['status'];
 							//-------------------------------------
-							$datos2 = base64_encode($row[$this->tid]).'||'.base64_encode(utf8_decode($row['nombres'].' '.$row['apellidos']));
+							$datos2 = base64_encode($row[$this->tid]).'||'.base64_encode(utf8_decode($row['nombre']));
 							//-------------------------------------
 							$inf.='<tr>';
 								$inf.='<td>'.$n.'</td>';
@@ -139,10 +136,7 @@
 										$inf .= '</button>';
 									}
 								$inf.='</td>';
-								$inf.='<td>'.$row['nombres'].'</td>';
-								$inf.='<td>'.$row['apellidos'].'</td>';
-								$inf.='<td>'.$row['usuario'].'</td>';
-								$inf.='<td>'.$row['correo'].'</td>';
+								$inf.='<td>'.$row['nombre'].'</td>';
 								$inf.='<td>'.$row['obs'].'</td>';
 								$inf.='<td>'.$row['created_at'].'</td>';
 								$inf.='<td>'.$row['updated_at'].'</td>';
@@ -224,7 +218,7 @@
 						while ($row = $fc_assoc($res->res)) {
 							$status = $row['status'];
 							//-------------------------------------
-							$datos2 = base64_encode($row[$this->tid]).'||'.base64_encode(utf8_decode($row['nombres'].' '.$row['apellidos']));
+							$datos2 = base64_encode($row[$this->tid]).'||'.base64_encode(utf8_decode($row['nombre']));
 							//-------------------------------------
 							$inf.='<tr>';
 								$inf.='<td>'.$n.'</td>';
@@ -285,7 +279,7 @@
 						while ($row = $fc_assoc($res->res)) {
 							$status = $row['status'];
 							//-------------------------------------
-							$datos2 = base64_encode($row[$this->tid]).'||'.base64_encode(utf8_decode($row['nombres'].' '.$row['apellidos']));
+							$datos2 = base64_encode($row[$this->tid]).'||'.base64_encode(utf8_decode($row['nombre']));
 							//-------------------------------------
 							$inf.='<tr>';
 								$inf.='<td>'.$n.'</td>';
@@ -358,10 +352,7 @@
 				$inf.='<thead>';
 					$inf.='<tr>';
 						$inf.='<th>#</th>';
-						$inf.='<th>Nombres</th>';
-						$inf.='<th>Apellidos</th>';
-						$inf.='<th>Usuario</th>';
-						$inf.='<th>Correo</th>';
+						$inf.='<th>Nombre</th>';
 						$inf.='<th>Observaciones</th>';
 						$inf.='<th>Creado</th>';
 						$inf.='<th>Editado</th>';
@@ -375,37 +366,7 @@
 						while ($row = $fc_assoc($res->res)) {
 							$inf.='<tr>';
 								$inf.='<td>'.$n.'</td>';
-								$inf.='<td>';
-									if (strlen($row['foto_u']) > 5) {
-										if ($tip==1) {
-											$inf.='<img style="max-width: 100px; max-height: 100px;" src="'.IMG.'usuarios/'.$row['foto_u'].'" />';
-										}else{
-											$imagenPath = __DIRIMG__ . 'usuarios/' . $row['foto_u'];
-											$extension = pathinfo($imagenPath, PATHINFO_EXTENSION);
-											//-------------------------------------
-											if (in_array($extension, ['svg'])) {
-												// Cargar imagen SVG
-												$svg = file_get_contents($imagenPath);
-												$inf .= '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '" style="max-width: 100px; max-height: 100px;" />';
-											} elseif (in_array($extension, ['png', 'jpg', 'jpeg'])) {
-												// Cargar imagen PNG o JPG y codificar en base64
-												$imagenData = file_get_contents($imagenPath);
-												$imagenBase64 = 'data:image/' . $extension . ';base64,' . base64_encode($imagenData);
-												$inf .= '<img src="' . $imagenBase64 . '" style="max-width: 100px; max-height: 100px;" />';
-											} else {
-												// Manejar otros tipos de archivo o extensiones aquí
-												$inf .= 'Tipo de archivo no compatible';
-											}
-											//$inf.='<img style="max-width: 100px; max-height: 100px;" src="'.__DIRIMG__.'cursos/'.$row['foto_u'].'" />';
-										}
-									}else{
-										$inf.='No imagen';
-									}
-								$inf.='</td>';
-								$inf.='<td>'.$row['nombres'].'</td>';
-								$inf.='<td>'.$row['apellidos'].'</td>';
-								$inf.='<td>'.$row['usuario'].'</td>';
-								$inf.='<td>'.$row['correo'].'</td>';
+								$inf.='<td>'.$row['nombre'].'</td>';
 								$inf.='<td>'.$row['obs'].'</td>';
 								$inf.='<td>'.$row['created_at'].'</td>';
 								$inf.='<td>'.$row['updated_at'].'</td>';

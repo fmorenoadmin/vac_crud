@@ -1510,7 +1510,7 @@
 			){
 				switch ($tipo) {
 					case 1://GENERAR SENTENCIA INSERT
-						$sql = "INSERT INTO ".$this_table." ( ";
+						$sql = "INSERT INTO {$this_table} ( ";
 						//-----------campos----------------
 							foreach ($dt as $key => $value) {
 								$sql .= $key.", ";
