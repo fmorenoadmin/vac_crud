@@ -47,7 +47,7 @@
 		//---------------------------------------------------------CONST
 			public function __construct() {
 				// Definimos el tipo por defecto si existe la constante, sino mysql
-				$this->db_type = defined('DB_TYPE') ? DB_TYPE : 'mysqli_';
+				$this->db_type = $this->getConst('DB_TYPE', 'mysqli_');
 				//---------------------------------------------------------
 				// Cargamos el mapeo inicial
 				$this->map_functions($this->db_type);
@@ -150,6 +150,9 @@
 						$this->map_functions('mysqli_');
 					break;
 				}
+			}
+			private function getConst($name, $default = null) {
+				return defined($name) ? constant($name) : $default;
 			}
 		//---------------------------------------------------------CON
 			function connect($schu=null,$db='con',$_db_type=null){
@@ -1233,21 +1236,19 @@
 				//---------------------------------------------------------
 				return $data;
 			}
-			public function db_get_btns($total, $pag, $url = null) { 
+			public function get_btns($total, $pag, $url = null, $bootstrap_v = 4) {
 				$data = new stdClass();
 				$data->inf = '';
-				$html = 
+				$html = '';
 				//---------------------------------------------------------
 				// 1. Definir filas por página (Usamos constante ROWS si existe, sino 10 por defecto)
-				$rows = defined('ROWS') ? ROWS : 10;
 				//---------------------------------------------------------
 				// 2. Calcular total de páginas
-				$total_paginas = ceil($total / $rows);
+				$rows = $this->getConst('ROWS', 50);
 				//---------------------------------------------------------
 				// Si hay 1 página, dejamos que fluya para mostrar los botones desactivados.
-				if ($total_paginas < 1) {
-					return $data;
-				}
+				$total_paginas = ceil($total / $rows);
+				if ($total_paginas < 1) return $data;
 				// ---------------------------------------------------------
 				// LÓGICA DE URL AUTOMÁTICA (UNIVERSAL)
 				// ---------------------------------------------------------
@@ -1269,102 +1270,58 @@
 				$conector = (strpos($base_path, '?') !== false) ? '&' : '?';
 				// 6. URL Final base para los botones
 				// Ejemplo resultante: "recursos.php?tipo=PDF&titulo=Hola&pag="
-				if (!empty($query_string)) {
-					$url_base = $base_path . $conector . $query_string . '&pag=';
-				} else {
-					$url_base = $base_path . $conector . 'pag=';
+				$url_base = !empty($query_string) ? $base_path . $conector . $query_string . '&pag=' : $base_path . $conector . 'pag=';
+				//---------------------------------------------------------
+				// Configuración por versión Bootstrap
+				$bootstrap_config = [
+					4 => ['disabled_tag' => 'span', 'disabled_attrs' => '', 'active_class' => 'active'],
+					5 => ['disabled_tag' => 'a', 'disabled_attrs' => 'tabindex="-1" aria-disabled="true"', 'active_class' => 'active'],
+				];
+				//---------------------------------------------------------
+				$config = $bootstrap_config[$bootstrap_v] ?? $bootstrap_config[4];
+				// ---------------------------------------------------------
+				// CONSTRUCCIÓN HTML
+				// ---------------------------------------------------------
+				$html = '<ul class="pagination justify-content-end">';
+				//---------------------------------------------------------
+				// Función auxiliar para generar botones
+				$renderBtn = function($label, $link = null, $disabled = false, $icon = null) use ($config) {
+					$icon_html = $icon ? '<i class="' . $icon . '"></i>' : '';
+					if ($disabled) {
+						return '<li class="page-item disabled"><' . $config['disabled_tag'] . ' class="page-link" ' . $config['disabled_attrs'] . '>' . $icon_html . $label . '</' . $config['disabled_tag'] . '></li>';
+					}
+					return '<li class="page-item"><a class="page-link" href="' . $link . '">' . $icon_html . $label . '</a></li>';
+				};
+				//---------------------------------------------------------
+				// Botones
+				$html .= $renderBtn('', $url_base . base64_encode(1), $pag <= 1, 'fas fa-angle-double-left');
+				$html .= $renderBtn('', $url_base . base64_encode($pag - 1), $pag <= 1, 'fas fa-angle-left');
+				//---------------------------------------------------------
+				// Rango numérico
+				$rango_inicio = max(1, $pag - 2);
+				$rango_fin = min($total_paginas, $pag + 2);
+				if ($rango_inicio > 1) {
+					$html .= $renderBtn('1', $url_base . base64_encode(1));
+					if ($rango_inicio > 2) $html .= $renderBtn('...', null, true);
 				}
-				// ---------------------------------------------------------
-				// CONSTRUCCIÓN HTML (Bootstrap 4)
-				// ---------------------------------------------------------
-					$html = '<ul class="pagination justify-content-end">';
-						//---------------------------------------------------------
-						// --- Botón: Primera Página (<<) ---
-						if ($pag > 1) {
-							$link = $url_base . base64_encode(1);
-							$html .= '<li class="page-item" title="Primera">';
-							$html .= '<a href="' . $link . '" class="page-link"><i class="fas fa-angle-double-left"></i></a>';
-							$html .= '</li>';
-						} else {
-							$html .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-double-left"></i></span></li>';
-						}
-						//---------------------------------------------------------
-						// --- Botón: Anterior (<) ---
-						if ($pag > 1) {
-							$anterior = $pag - 1;
-							$link = $url_base . base64_encode($anterior);
-							$html .= '<li class="page-item" title="Anterior">';
-							$html .= '<a href="' . $link . '" class="page-link"><i class="fas fa-angle-left"></i></a>';
-							$html .= '</li>';
-						} else {
-							$html .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-left"></i></span></li>';
-						}
-						//---------------------------------------------------------
-						// --- Rango de Números ---
-						// Lógica: Mostrar actual, 2 atrás y 2 adelante (ej: si estoy en 5: 3,4,[5],6,7)
-						$rango_inicio = max(1, $pag - 2);
-						$rango_fin	= min($total_paginas, $pag + 2);
-						//---------------------------------------------------------
-						// Ajuste visual: Si estamos al principio (1,2), mostrar más adelante para mantener tamaño
-						if ($rango_inicio == 1) {
-							$rango_fin = min($total_paginas, $rango_inicio + 4);
-						}
-						//---------------------------------------------------------
-						// Ajuste visual: Si estamos al final, mostrar más atrás
-						if ($rango_fin == $total_paginas) {
-							$rango_inicio = max(1, $rango_fin - 4);
-						}
-						//---------------------------------------------------------
-						// "..." al inicio si hay salto
-						if ($rango_inicio > 1) {
-							$link1 = $url_base . base64_encode(1);
-							$html .= '<li class="page-item"><a href="' . $link1 . '" class="page-link">1</a></li>';
-							if ($rango_inicio > 2) {
-								$html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
-							}
-						}
-						//---------------------------------------------------------
-						// Ciclo de botones numéricos
-						for ($i = $rango_inicio; $i <= $rango_fin; $i++) {
-							if ($i == $pag) {
-								$html .= '<li class="page-item active"><span class="page-link">' . $i . '</span></li>';
-							} else {
-								$link = $url_base . base64_encode($i);
-								$html .= '<li class="page-item"><a href="' . $link . '" class="page-link">' . $i . '</a></li>';
-							}
-						}
-						//---------------------------------------------------------
-						// "..." al final si hay salto
-						if ($rango_fin < $total_paginas) {
-							if ($rango_fin < $total_paginas - 1) {
-								$html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
-							}
-							$linkLast = $url_base . base64_encode($total_paginas);
-							$html .= '<li class="page-item"><a href="' . $linkLast . '" class="page-link">' . $total_paginas . '</a></li>';
-						}
-						//---------------------------------------------------------
-						// --- Botón: Siguiente (>) ---
-						if ($pag < $total_paginas) {
-							$siguiente = $pag + 1;
-							$link = $url_base . base64_encode($siguiente);
-							$html .= '<li class="page-item" title="Siguiente">';
-							$html .= '<a href="' . $link . '" class="page-link"><i class="fas fa-angle-right"></i></a>';
-							$html .= '</li>';
-						} else {
-							$html .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-right"></i></span></li>';
-						}
-						//---------------------------------------------------------
-						// --- Botón: Última (>>) ---
-						if ($pag < $total_paginas) {
-							$link = $url_base . base64_encode($total_paginas);
-							$html .= '<li class="page-item" title="Última">';
-							$html .= '<a href="' . $link . '" class="page-link"><i class="fas fa-angle-double-right"></i></a>';
-							$html .= '</li>';
-						} else {
-							$html .= '<li class="page-item disabled"><span class="page-link"><i class="fas fa-angle-double-right"></i></span></li>';
-						}
-						//---------------------------------------------------------
-					$html .= '</ul>';
+				//---------------------------------------------------------
+				for ($i = $rango_inicio; $i <= $rango_fin; $i++) {
+					if ($i == $pag) {
+						$html .= '<li class="page-item ' . $config['active_class'] . '"><span class="page-link">' . $i . '</span></li>';
+					} else {
+						$html .= $renderBtn($i, $url_base . base64_encode($i));
+					}
+				}
+				//---------------------------------------------------------
+				if ($rango_fin < $total_paginas) {
+					if ($rango_fin < $total_paginas - 1) $html .= $renderBtn('...', null, true);
+					$html .= $renderBtn($total_paginas, $url_base . base64_encode($total_paginas));
+				}
+				//---------------------------------------------------------
+				$html .= $renderBtn('', $url_base . base64_encode($pag + 1), $pag >= $total_paginas, 'fas fa-angle-right');
+				$html .= $renderBtn('', $url_base . base64_encode($total_paginas), $pag >= $total_paginas, 'fas fa-angle-double-right');
+				//---------------------------------------------------------
+				$html .= '</ul>';
 				//---------------------------------------------------------
 				$data->inf = $html;
 				//---------------------------------------------------------
