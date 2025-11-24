@@ -1236,7 +1236,7 @@
 				//---------------------------------------------------------
 				return $data;
 			}
-			public function get_btns($total, $pag, $url = null, $bootstrap_v = 4) {
+			public function db_get_btns($total, $pag, $url = null, $bootstrap_v = 4) {
 				$data = new stdClass();
 				$data->inf = '';
 				$html = '';
