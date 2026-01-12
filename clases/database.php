@@ -1867,10 +1867,10 @@
 				$r = 0; // Total editados con éxito
 				//---------------------------------------------------------
 				// 4. Validación Global
-				if(empty($json->tname) || empty($json->tid) || empty($json->pid)){
+				if(empty($json->tname) || empty($json->tid)){
 					$result[] = array(
 						"result"  => false,
-						"mensaje" => "Faltan datos de configuración (tname, tid o pid)."
+						"mensaje" => "Faltan datos de configuración (tname, tid)."
 					);
 					//---------------------------------------------------------
 					$data->res = $result;
@@ -1900,14 +1900,10 @@
 					//---------------------------------------------------------
 					if ($valid_row) {
 						// Generamos SQL UPDATE para esta fila
-						// Nota: $json->pid es el NOMBRE del campo ID en el array $fila que contiene el valor del ID
-						// Ejemplo: Si en la DB es 'id_usuario', y en el array $fila es 'id_user', entonces $json->pid = 'id_user'
-						// Pero get_sql espera el VALOR del ID en el último parámetro.
-						// CORRECCIÓN LÓGICA RESPECTO A TU CÓDIGO ORIGINAL:
-						// En db_edit (individual), $json->pid es el VALOR.
-						// En db_edit_all (masivo), $json->pid parece ser la CLAVE en $fila que tiene el ID.
-						// Asumo que $fila[$json->pid] contiene el ID de esa fila específica.
-						$id_valor = isset($fila[$json->pid]) ? $fila[$json->pid] : null;
+						//---------------------------------------------------------
+						$id_valor = $fila[$json->t_camp];
+						//---------------------------------------------------------
+						unset($fila[$json->t_camp]);
 						//---------------------------------------------------------
 						if ($id_valor) {
 							$sql = $this->get_sql($json->tname, $fila, 2, $json->tid, $id_valor);

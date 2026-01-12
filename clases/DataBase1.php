@@ -691,6 +691,39 @@
 					'</span>' . $extra // Hack para mantener tu estructura de str_replace anterior
 				);
 			}
+			public function getMonthStartEnd($periodo,$periodo_fin=null) {
+				$data = new stdClass();
+				//---------------------------------------------------------
+				// Convertir el periodo en formato "YYYY-MM" a una fecha
+				$data->ini = $periodo . "-01";
+				//---------------------------------------------------------
+				if (!is_null($periodo_fin)) {
+					$periodo_fin . "-01";
+					// Crear un objeto DateTime a partir de la fecha de inicio
+					$date = new DateTime($periodo_fin);
+				}else{
+					$periodo_fin = $data->ini;
+					// Crear un objeto DateTime a partir de la fecha de inicio
+					$date = new DateTime($periodo_fin);
+				}
+				//---------------------------------------------------------
+				// Obtener el último día del mes
+				$data->fin = $date->format('Y-m-t');
+				//---------------------------------------------------------
+				// Retornar las fechas en un arreglo asociativo
+				return $data;
+			}
+			public function form_dia($dia){
+				$_dia = '01';
+				//-----------------------------------
+				if ($dia < 10) {
+					$_dia = '0'.$dia;
+				}else{
+					$_dia = (string)$dia;
+				}
+				//-----------------------------------
+				return $_dia;
+			}
 			public function sum_fecha($campo, $fecha, $time){
 				if ($campo != 1 || is_null($fecha)) {
 					return NULL;
@@ -921,6 +954,18 @@
 				$mes_txt = isset($meses[$mes]) ? $meses[$mes] : '00-No definido';
 				//---------------------------------------------------------
 				return $mes_txt;
+			}
+			//---------------------------------------------------------
+			public function calc_codigo($pid,$largo=11){
+				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo tu switch en 1 línea
+				// Rellena con '0' a la izquierda hasta llegar a longitud 11 (según tu lógica original)
+				//-----------------------------------
+				$pid = intval($pid);
+				$cod = null;
+				//-----------------------------------
+				$cod = str_pad($pid, $largo, '0', STR_PAD_LEFT);
+				//-----------------------------------
+				return $cod;
 			}
 		//---------------------------------------------------------GET
 			public function db_get_string($dt, $json, $db='con', $_db_type=null){
@@ -1900,14 +1945,8 @@
 					//---------------------------------------------------------
 					if ($valid_row) {
 						// Generamos SQL UPDATE para esta fila
-						// Nota: $json->pid es el NOMBRE del campo ID en el array $fila que contiene el valor del ID
-						// Ejemplo: Si en la DB es 'id_usuario', y en el array $fila es 'id_user', entonces $json->pid = 'id_user'
-						// Pero get_sql espera el VALOR del ID en el último parámetro.
-						// CORRECCIÓN LÓGICA RESPECTO A TU CÓDIGO ORIGINAL:
-						// En db_edit (individual), $json->pid es el VALOR.
-						// En db_edit_all (masivo), $json->pid parece ser la CLAVE en $fila que tiene el ID.
-						// Asumo que $fila[$json->pid] contiene el ID de esa fila específica.
-						$id_valor = isset($fila[$json->pid]) ? $fila[$json->pid] : null;
+						$id_valor = isset($fila[$json->t_camp]) ? $fila[$json->t_camp] : null;
+						unset($fila[$json->t_camp]);
 						//---------------------------------------------------------
 						if ($id_valor) {
 							$sql = $this->get_sql($json->tname, $fila, 2, $json->tid, $id_valor);
