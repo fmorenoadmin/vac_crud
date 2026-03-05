@@ -654,7 +654,74 @@
 				//---------------------------------------------------------
 				return $data;
 			}
+			/**
+			 * Obtiene la PRIMARY KEY de forma universal para MySQL, PostgreSQL, SQL Server y Oracle
+			 */
+			public function get_primary_key($tabla) {
+				// Detectamos el motor desde la conexión (ajusta según cómo guardes el driver en tu clase)
+				// Asumiremos que tienes una propiedad $this->driver o similar.
+				$driver = $this->db_type;
+				//---------------------------------------------------------
+				switch ($driver) {
+					case 'mysql_':
+						$sql = "SELECT COLUMN_NAME 
+								FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+								WHERE TABLE_NAME = '$tabla' AND CONSTRAINT_NAME = 'PRIMARY' 
+								AND TABLE_SCHEMA = DATABASE() LIMIT 1";
+					break;
+					case 'pgsql_':
+						$sql = "SELECT a.attname AS COLUMN_NAME
+								FROM pg_index i
+								JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+								WHERE i.indrelid = '$tabla'::regclass AND i.indisprimary LIMIT 1";
+					break;
+					case 'sqlsrv_':
+						$sql = "SELECT COLUMN_NAME
+								FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+								WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
+								AND TABLE_NAME = '$tabla'";
+					break;
+					case 'oci_':
+						$sql = "SELECT column_name FROM all_cons_columns 
+								WHERE constraint_name = (
+									SELECT constraint_name FROM all_constraints 
+									WHERE table_name = UPPER('$tabla') AND constraint_type = 'P'
+								) AND ROWNUM = 1";
+					break;
+					default:
+						return 'id'; // Valor por defecto si no se reconoce el motor
+				}
+				//---------------------------------------------------------
+				$res = $this->db_exec_sql_array($sql);
+				//---------------------------------------------------------
+				return (isset($res[0]->COLUMN_NAME)) ? $res[0]->COLUMN_NAME : 'id';
+			}
 		//---------------------------------------------------------UTILIDADES
+			// FUNCIÓN PARA VERIFICAR EL TOKEN DE TURNSTILE
+			function validarTurnstile($token) {
+				$turnstile_verify_url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+				//---------------------------------------------------------
+				// Datos que se enviarán a Cloudflare para la verificación
+				$post_data = http_build_query([
+					'secret'   => TURNSTILE_SECRET_KEY,
+					'response' => $token,
+					'remoteip' => $_SERVER['REMOTE_ADDR'] // IP del usuario
+				]);
+				//---------------------------------------------------------
+				// Usamos cURL para hacer la petición POST a Cloudflare
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $turnstile_verify_url);
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+				//---------------------------------------------------------
+				$response = curl_exec($ch);
+				curl_close($ch);
+				//---------------------------------------------------------
+				// Decodificamos la respuesta JSON de Cloudflare
+				return json_decode($response);
+			}
 			public function cal_fecha($fecha){
 				if (is_null($fecha)) {
 					return '<span class="btn btn-outline-info btn-xs">Sin Fecha</span>';
@@ -690,6 +757,24 @@
 					$fecha,
 					'</span>' . $extra // Hack para mantener tu estructura de str_replace anterior
 				);
+			}
+			public function estadoFecha($fecha) {
+				if (!$fecha) return "<span class='bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs'>Sin dato</span>";
+				//-----------------------------
+				$hoy = new DateTime();
+				$vto = new DateTime($fecha);
+				$diferencia = $hoy->diff($vto)->days;
+				$futuro = $vto > $hoy;
+				//-----------------------------
+				$formatoFecha = $vto->format('Y-m-d');
+				//-----------------------------
+				if (!$futuro) {
+					return "<span class='bg-red-200 text-red-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
+				} elseif ($diferencia <= 30) {
+					return "<span class='bg-orange-200 text-orange-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
+				} else {
+					return "<span class='bg-green-200 text-green-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
+				}
 			}
 			public function sum_fecha($campo, $fecha, $time){
 				if ($campo != 1 || is_null($fecha)) {
@@ -775,6 +860,25 @@
 				// 6. Si nada funcionó, devolvemos la fecha actual por defecto 
 				// (Cumpliendo tu requisito de devolver SIEMPRE un formato fecha válido)
 				return date('Y-m-d');
+			}
+			public function form_hora($hora){
+				// Si la hora es nula, asignar la hora actual en formato HH:MM:SS
+				if (is_null($hora)) {
+					$hora = date('H:i:s');
+				}
+				//-----------------------------------
+				// Verificar si la hora tiene el formato HH:MM:SS
+				$hora_formato_hms = DateTime::createFromFormat('H:i:s', $hora);
+				//-----------------------------------
+				if ($hora_formato_hms !== false) {
+					// Si es formato HH:MM:SS, conservar la hora tal cual
+					$nueva_hora = $hora_formato_hms->format('H:i:s');
+				} else {
+					// Si no es formato HH:MM:SS, asumimos que ya está en formato correcto
+					$nueva_hora = $hora;
+				}
+				//-----------------------------------
+				return $nueva_hora;
 			}
 			public function form_float($numero, $cant=2){
 				// Limpieza robusta: acepta "1.000,50" o "1000.50"
@@ -921,6 +1025,20 @@
 				$mes_txt = isset($meses[$mes]) ? $meses[$mes] : '00-No definido';
 				//---------------------------------------------------------
 				return $mes_txt;
+			}
+			public function mayus_tilds($txt){
+				$tmp = $txt;
+				//------------------------------------
+				$tmp = str_replace('á', 'Á', $tmp);
+				$tmp = str_replace('é', 'É', $tmp);
+				$tmp = str_replace('í', 'Í', $tmp);
+				$tmp = str_replace('ó', 'Ó', $tmp);
+				$tmp = str_replace('ú', 'Ú', $tmp);
+				$tmp = str_replace('ñ', 'Ñ', $tmp);
+				//------------------------------------
+				$txt = $tmp;
+				//------------------------------------
+				return $txt;
 			}
 		//---------------------------------------------------------GET
 			public function db_get_string($dt, $json, $db='con', $_db_type=null){
