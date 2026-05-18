@@ -5,21 +5,21 @@ define('HTTP', 'http://');
 define('HTTPS', 'https://');
 define('HTTP2', 'https://www.');
 //------------------------------------
-define('TIPE', 'CGS COMPUTER');
+define('TIPE', 'EMPRESA NAME');
 define('TIPO', 'Sitio Web');
 define('TIT', ' | '.TIPE);
-define('EMP', 'CYBERGAMES (C.G.S.) E.I.R.L.');
-define('EMP_RUC', '20601907063');
-define('EMP_DIR', 'TIENDA CC CYBERPLAZA 2A 101-102, Av Garcilazo de la Vega 1348');
-define('EMP_MAP', 'https://maps.app.goo.gl/YFLYM2CRcnxVARZ16');
-define('EMP_EMA', 'contato@cgs-computer.pe');
-define('EMP_PHO', '922211531');
+define('EMP', 'EMPRESA NAME');
+define('EMP_RUC', 'RUC');
+define('EMP_DIR', 'DIR');
+define('EMP_MAP', 'MAP');
+define('EMP_EMA', 'EMAIL');
+define('EMP_PHO', 'PHONE');
 define('EMP_WHA', 'https://wa.me/51'.EMP_PHO);
-define('EMP_DEP', 'LIMA');
-define('EMP_PRO', 'LIMA');
-define('EMP_DIS', 'LIMA');
+define('EMP_DEP', 'DEPARTMENT');
+define('EMP_PRO', 'PROVINCE');
+define('EMP_DIS', 'DISTRICT');
 //------------------------------------
-define('DOM', 'cgs-computer');
+define('DOM', 'domain');
 define('DOM_COM', DOM.'.com');
 define('DOM_CPE', DOM.'.com.pe');
 define('DOM_PE', DOM.'.pe');
@@ -28,9 +28,9 @@ define('DOM_NET', DOM.'.net.pe');
 define('CONF', 'config/');
 define('DIRACT', 'ACTIONVQ/');
 define('DIRMOR', 'MORENOKU/');
-define('DIRWEB', '/home/uetzhcnq/public_html/');
-define('DIRARC', '/home/uetzhcnq/_hosting/archivos/');
-define('DIRSIS', '/home/uetzhcnq/_hosting/sistema/');
+define('DIRWEB', '/path/to/web/');
+define('DIRARC', '/path/to/archivos/');
+define('DIRSIS', '/path/to/sistema/');
 define('DIRFIL', DIRARC.'files/');
 define('DIRIMG', DIRARC.'img/');
 define('DIRERR', 'error/');
@@ -58,16 +58,16 @@ define('SCHU_EMAIL', SCHU);
 //define('SCHU_EMAIL', '_qas');
 //------------------------------------
 if (SCHU == '_qas') {
-	define('DIRPRI', '/cgs-computer.pe/v3/web/');
+	define('DIRPRI', '/domain.com/v3/web/');
 	//------------------------------------
-	define('__DIRIMG__', $_SERVER['DOCUMENT_ROOT']."/cgs-computer.pe/v3/archivos/img/");//ruta global donde se almacenan los archivos
+	define('__DIRIMG__', $_SERVER['DOCUMENT_ROOT']."/domain.com/v3/archivos/img/");//ruta global donde se almacenan los archivos
 	//------------------------------------
 	define('URL', HTTPS.'localhost'.DIRPRI);
 	define('URL2', HTTPS.'localhost');
 	//------------------------------------
-	define('PLUG', HTTPS.'localhost/cgs-computer.pe/v3/plugins/');
-	define('ARCH', HTTPS.'localhost/cgs-computer.pe/v3/archivos/');
-	define('SIST', HTTPS.'localhost/cgs-computer.pe/v3/sistema/');
+	define('PLUG', HTTPS.'localhost/domain.com/v3/plugins/');
+	define('ARCH', HTTPS.'localhost/domain.com/v3/archivos/');
+	define('SIST', HTTPS.'localhost/domain.com/v3/sistema/');
 	//------------------------------------
 	define('DB_HOST', 'localhost');
 	define('DB_NAME', 'DBNAME');
