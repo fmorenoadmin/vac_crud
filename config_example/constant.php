@@ -41,8 +41,8 @@ define('DB_TYPE', 'mysqli_');//base de datos MySQL
 //define('DB_TYPE', 'pg_');//base de datos PostgreSQL
 //define('DB_TYPE', 'sqlsrv_');//base de datos SQL Server
 //------------------------------------
-define('TURNSTILE_SITE_KEY', '0x4AAAAAADK3JbleCVUq0ZoW');
-define('TURNSTILE_SECRET_KEY', '0x4AAAAAADK3JWoUUGwVdUeK8tf2msISwkk');
+define('TURNSTILE_SITE_KEY', '');
+define('TURNSTILE_SECRET_KEY', '');
 //------------------------------------
 define('DB_PORT', '3306');
 //------------------------------------
@@ -70,9 +70,9 @@ if (SCHU == '_qas') {
 	define('SIST', HTTPS.'localhost/cgs-computer.pe/v3/sistema/');
 	//------------------------------------
 	define('DB_HOST', 'localhost');
-	define('DB_NAME', 'uetzhcnq_new_cgs');
-	define('DB_USER', 'root');
-	define('DB_PASS', '12345');
+	define('DB_NAME', 'DBNAME');
+	define('DB_USER', 'DBUSER');
+	define('DB_PASS', 'DBPASS');
 	//------------------------------------
 }else{
 	define('DIRPRI', '/');
@@ -87,9 +87,9 @@ if (SCHU == '_qas') {
 	define('SIST', HTTPS.'sistema.'.DOM_PE.DIRPRI);
 	//------------------------------------
 	define('DB_HOST', 'localhost');
-	define('DB_NAME', 'uetzhcnq_new_cgs');
-	define('DB_USER', 'uetzhcnq_new_cgs');
-	define('DB_PASS', 'CC!ZaA0toglfBMt&');
+	define('DB_NAME', 'DBNAME');
+	define('DB_USER', 'DBUSER');
+	define('DB_PASS', 'DBPASS');
 	//------------------------------------
 }
 //------------------------------------
