@@ -2129,7 +2129,7 @@
 				// Helper local para escapar comillas simples (SQL Injection básico)
 				// Reemplaza ' por '' (estándar SQL)
 				$clean = function($val) {
-					return str_replace("'", "''", $val);
+					return str_replace("'", "''", $val ?? '');
 				};
 				//---------------------------------------------------------
 				switch ($tipo) {
