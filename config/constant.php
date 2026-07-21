@@ -20,6 +20,13 @@ if (SCHU=='_qas') {
 	//---------------------------------------
 	define('URL', HTTPS.DOM.'/vac_crud/');
 	define('URL2', HTTPS.DOM.'');
+	//---------------------------------------
+	define('DB_HOST', 'localhost');
+	define('DB_NAME', 'vac_crud');
+	define('DB_USER', 'root');
+	define('DB_PORT', '3306');
+	define('DB_PASS', '');
+	//---------------------------------------
 }else{
 	define('__DIRIMG__', $_SERVER['DOCUMENT_ROOT']."/assets/img/");//ruta global donde se almacenan los archivos
 	//---------------------------------------
@@ -27,6 +34,13 @@ if (SCHU=='_qas') {
 	//---------------------------------------
 	define('URL', HTTPS.DOM.'/');
 	define('URL2', HTTPS.DOM.'');
+	//---------------------------------------
+	define('DB_HOST', 'localhost');
+	define('DB_NAME', 'AQUI_TU_NOMBRE_DATABASE');
+	define('DB_USER', 'AQUI_TU_USUARIO');
+	define('DB_PORT', '3306');
+	define('DB_PASS', 'AQUI_TU_CONTRASEÑA');
+	//---------------------------------------
 }
 //---------------------------------------
 define('ACTI', URL.DIRACT.'');

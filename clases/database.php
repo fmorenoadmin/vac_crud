@@ -5,18 +5,18 @@
 	class database
 	{
 		//---------------------------------------------------------
-			private $db_prd = 'localhost';//IP SERVER prd
-			private $db_qas = 'localhost';//IP SERVER qas
+			private $db_prd = DB_HOST;//IP SERVER prd
+			private $db_qas = DB_HOST;//IP SERVER qas
 			//---------------------------------------
-			private $db_name_qas = 'vac_crud';
-			private $db_name_prd = 'AQUI_TU_NOMBRE_DATABASE';
+			private $db_name_qas = DB_NAME;
+			private $db_name_prd = DB_NAME;
 			//---------------------------------------
-			private $db_user_qas = 'root';
-			private $db_user_prd = 'AQUI_TU_USUARIO';
+			private $db_user_qas = DB_USER;
+			private $db_user_prd = DB_USER;
 			//---------------------------------------
-			private $db_pass_qas = '';
-			private $db_pass_prd = 'AQUI_TU_CONTRASEÑA';
-			private $db_port = 3306;// 5432 para postgresql
+			private $db_pass_qas = DB_PASS;
+			private $db_pass_prd = DB_PASS;
+			private $db_port = DB_PORT;// 5432 para postgresql
 		//---------------------------------------------------------
 			private $ruta_certs = '/var/www/certs/';
 			private $ssl_mode = false;//Esto es manual, o tambien puede ser dimánico, ya que significa que la base de datos requiere conexión SSL
