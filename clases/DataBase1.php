@@ -691,6 +691,24 @@
 					'</span>' . $extra // Hack para mantener tu estructura de str_replace anterior
 				);
 			}
+			public function estadoFecha($fecha) {
+				if (!$fecha) return "<span class='bg-gray-200 text-gray-800 px-2 py-1 rounded text-xs'>Sin dato</span>";
+				//-----------------------------
+				$hoy = new DateTime();
+				$vto = new DateTime($fecha);
+				$diferencia = $hoy->diff($vto)->days;
+				$futuro = $vto > $hoy;
+				//-----------------------------
+				$formatoFecha = $vto->format('Y-m-d');
+				//-----------------------------
+				if (!$futuro) {
+					return "<span class='bg-red-200 text-red-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
+				} elseif ($diferencia <= 30) {
+					return "<span class='bg-orange-200 text-orange-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
+				} else {
+					return "<span class='bg-green-200 text-green-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
+				}
+			}
 			public function getMonthStartEnd($periodo,$periodo_fin=null) {
 				$data = new stdClass();
 				//---------------------------------------------------------
@@ -809,6 +827,25 @@
 				// (Cumpliendo tu requisito de devolver SIEMPRE un formato fecha válido)
 				return date('Y-m-d');
 			}
+			public function form_fecha_null($fecha){
+				if (is_null($fecha)) {
+					$nueva_fecha = '';
+				}else{
+					//-----------------------------------
+					// Verificar si la fecha tiene el formato DD/MM/YYYY
+					$fecha_formato_dmy = DateTime::createFromFormat('d/m/Y', $fecha);
+					//-----------------------------------
+					if ($fecha_formato_dmy !== false) {
+						// Si es formato DD/MM/YYYY, convertir a YYYY-MM-DD
+						$nueva_fecha = $fecha_formato_dmy->format('Y-m-d');
+					} else {
+						// Si no es formato DD/MM/YYYY, asumimos que es YYYY-MM-DD
+						$nueva_fecha = $fecha;
+					}
+				}
+				//-----------------------------------
+				return $nueva_fecha;
+			}
 			public function form_float($numero, $cant=2){
 				// Limpieza robusta: acepta "1.000,50" o "1000.50"
 				$numero = trim((string)$numero); // Aseguramos string
@@ -825,6 +862,22 @@
 				$val = floatval($numero);
 				//---------------------------------------------------------
 				return ($val > 0) ? number_format($val, $cant, '.', '') : '0.00';
+			}
+			public function tofloat($num) {
+				$dotPos = strrpos($num, '.');
+				$commaPos = strrpos($num, ',');
+				//-----------------------------------
+				$sep = (($dotPos > $commaPos) && $dotPos) ? $dotPos : 
+					((($commaPos > $dotPos) && $commaPos) ? $commaPos : false);
+				//-----------------------------------
+				if (!$sep) {
+					return floatval(preg_replace("/[^0-9]/", "", $num));
+				}
+				//-----------------------------------
+				return floatval(
+					preg_replace("/[^0-9]/", "", substr($num, 0, $sep)) . '.' .
+					preg_replace("/[^0-9]/", "", substr($num, $sep+1, strlen($num)))
+				);
 			}
 			public function getRandomCode($tipo=8, $largo=16){
 				//---------------------------------------------------------
@@ -860,6 +913,16 @@
 				}
 				//---------------------------------------------------------
 				return $token;
+			}
+			public function getRandomColor(){
+				$r = rand(0, 127); // Rojo entre 0 y 127
+				$g = rand(0, 127); // Verde entre 0 y 127
+				$b = rand(0, 127); // Azul entre 0 y 127
+				//---------------------------------------------------------
+				// Convierte los valores a hexadecimal
+				$color = sprintf("#%02x%02x%02x", $r, $g, $b);
+				//---------------------------------------------------------
+				return $color;
 			}
 			public function form_txt($input) {
 				// Limpieza estándar
@@ -926,6 +989,46 @@
 				//---------------------------------------------------------
 				return $str;
 			}
+			public function dividir_str_dos($cadena, $test=false, $longitud = 30) {
+				// Paso 1: Asegurarse de que la cadena esté en UTF-8
+				$cadena = mb_convert_encoding($cadena, 'UTF-8', 'UTF-8');
+				if ($test) { error_log("Después de convertir a UTF-8: " . $cadena); }
+				//---------------------------------------------------------
+				// Paso 2: Decodificar entidades HTML (&amp;, &lt;, etc.)
+				$cadena = html_entity_decode($cadena, ENT_QUOTES | ENT_HTML401, 'UTF-8');
+				if ($test) { error_log("Después de decodificar entidades HTML: " . $cadena); }
+				//---------------------------------------------------------
+				// Paso 3: Eliminar todas las etiquetas HTML
+				$cadena_limpia = strip_tags($cadena);
+				if ($test) { error_log("Después de eliminar etiquetas HTML: " . $cadena_limpia); }
+				//---------------------------------------------------------
+				// Paso 4: Eliminar espacios en blanco adicionales al principio y al final
+				$cadena_limpia = trim($cadena_limpia);
+				if ($test) { error_log("Después de trim: " . $cadena_limpia); }
+				//---------------------------------------------------------
+				// Validar si la cadena está vacía después de ser limpiada
+				if (empty($cadena_limpia)) {
+					error_log("dividir_str_dos: La cadena está vacía después de procesarla.");
+					return [];
+				}
+				//---------------------------------------------------------
+				// Paso 5: Dividir la cadena en partes de la longitud especificada
+				if (function_exists('mb_str_split')) {
+					$partes = mb_str_split($cadena_limpia, $longitud, 'UTF-8'); // Mejor manejo de multibyte
+				} else {
+					$partes = str_split($cadena_limpia, $longitud); // Alternativa para versiones más viejas
+				}
+				if ($test) { error_log("Partes divididas: " . json_encode($partes)); }
+				//---------------------------------------------------------
+				foreach ($partes as $key => $value) {
+					// Paso 6: parsear todos los caracteres a html
+					$partes[$key] = htmlspecialchars($value, ENT_QUOTES | ENT_HTML401, 'UTF-8');
+				}
+				//---------------------------------------------------------
+				if ($test) { error_log("Partes procesadas para SAP: ".json_encode($partes)); }
+				// Paso 7: Retornar el array con las partes limpias
+				return $partes;
+			}
 			public function custom_escape_string($value) {
 				// Paso 1: Decodificar entidades HTML (&amp;, &lt;, etc.)
 				$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
@@ -954,6 +1057,14 @@
 				$mes_txt = isset($meses[$mes]) ? $meses[$mes] : '00-No definido';
 				//---------------------------------------------------------
 				return $mes_txt;
+			}
+			public function get_drop_duplic(array $array, array $keys = [], bool $idem = true): array {
+				$unicos = [];
+				foreach ($array as $elemento) {
+					$clave = $idem ? serialize($elemento) : implode('_', array_intersect_key($elemento, array_flip($keys)));
+					$unicos[$clave] = $elemento;
+				}
+				return array_values($unicos);
 			}
 			//---------------------------------------------------------
 			public function calc_codigo($pid,$largo=11){

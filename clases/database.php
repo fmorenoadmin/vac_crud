@@ -776,6 +776,39 @@
 					return "<span class='bg-green-200 text-green-800 px-2 py-1 rounded text-xs'>{$formatoFecha}</span>";
 				}
 			}
+			public function getMonthStartEnd($periodo,$periodo_fin=null) {
+				$data = new stdClass();
+				//---------------------------------------------------------
+				// Convertir el periodo en formato "YYYY-MM" a una fecha
+				$data->ini = $periodo . "-01";
+				//---------------------------------------------------------
+				if (!is_null($periodo_fin)) {
+					$periodo_fin . "-01";
+					// Crear un objeto DateTime a partir de la fecha de inicio
+					$date = new DateTime($periodo_fin);
+				}else{
+					$periodo_fin = $data->ini;
+					// Crear un objeto DateTime a partir de la fecha de inicio
+					$date = new DateTime($periodo_fin);
+				}
+				//---------------------------------------------------------
+				// Obtener el último día del mes
+				$data->fin = $date->format('Y-m-t');
+				//---------------------------------------------------------
+				// Retornar las fechas en un arreglo asociativo
+				return $data;
+			}
+			public function form_dia($dia){
+				$_dia = '01';
+				//-----------------------------------
+				if ($dia < 10) {
+					$_dia = '0'.$dia;
+				}else{
+					$_dia = (string)$dia;
+				}
+				//-----------------------------------
+				return $_dia;
+			}
 			public function sum_fecha($campo, $fecha, $time){
 				if ($campo != 1 || is_null($fecha)) {
 					return NULL;
@@ -861,6 +894,25 @@
 				// (Cumpliendo tu requisito de devolver SIEMPRE un formato fecha válido)
 				return date('Y-m-d');
 			}
+			public function form_fecha_null($fecha){
+				if (is_null($fecha)) {
+					$nueva_fecha = '';
+				}else{
+					//-----------------------------------
+					// Verificar si la fecha tiene el formato DD/MM/YYYY
+					$fecha_formato_dmy = DateTime::createFromFormat('d/m/Y', $fecha);
+					//-----------------------------------
+					if ($fecha_formato_dmy !== false) {
+						// Si es formato DD/MM/YYYY, convertir a YYYY-MM-DD
+						$nueva_fecha = $fecha_formato_dmy->format('Y-m-d');
+					} else {
+						// Si no es formato DD/MM/YYYY, asumimos que es YYYY-MM-DD
+						$nueva_fecha = $fecha;
+					}
+				}
+				//-----------------------------------
+				return $nueva_fecha;
+			}
 			public function form_hora($hora){
 				// Si la hora es nula, asignar la hora actual en formato HH:MM:SS
 				if (is_null($hora)) {
@@ -897,6 +949,22 @@
 				//---------------------------------------------------------
 				return ($val > 0) ? number_format($val, $cant, '.', '') : '0.00';
 			}
+			public function tofloat($num) {
+				$dotPos = strrpos($num, '.');
+				$commaPos = strrpos($num, ',');
+				//-----------------------------------
+				$sep = (($dotPos > $commaPos) && $dotPos) ? $dotPos : 
+					((($commaPos > $dotPos) && $commaPos) ? $commaPos : false);
+				//-----------------------------------
+				if (!$sep) {
+					return floatval(preg_replace("/[^0-9]/", "", $num));
+				}
+				//-----------------------------------
+				return floatval(
+					preg_replace("/[^0-9]/", "", substr($num, 0, $sep)) . '.' .
+					preg_replace("/[^0-9]/", "", substr($num, $sep+1, strlen($num)))
+				);
+			}
 			public function getRandomCode($tipo=8, $largo=16){
 				//---------------------------------------------------------
 				$sets = array(
@@ -931,6 +999,16 @@
 				}
 				//---------------------------------------------------------
 				return $token;
+			}
+			public function getRandomColor(){
+				$r = rand(0, 127); // Rojo entre 0 y 127
+				$g = rand(0, 127); // Verde entre 0 y 127
+				$b = rand(0, 127); // Azul entre 0 y 127
+				//---------------------------------------------------------
+				// Convierte los valores a hexadecimal
+				$color = sprintf("#%02x%02x%02x", $r, $g, $b);
+				//---------------------------------------------------------
+				return $color;
 			}
 			public function form_txt($input) {
 				// Limpieza estándar
