@@ -2247,14 +2247,29 @@
 					case 'clie':
 						$sql = "SELECT {$top} * FROM scheme_name.v_clients WHERE id_int LIKE '{$pid_clean}' {$limit};";
 					break;
+					case 'produc_all':
+						$sql = "SELECT id_p AS id, text FROM public.view_products_all WHERE text LIKE '%{$pid_clean}%' ;";
+						$ret_array = true;
+					break;
+					case 'tc':
+						$sql = "SELECT {$top} * FROM tc WHERE fecha LIKE '{$pid_clean}' {$limit} ;";
+						$db='bnh';
+						$_type='mysqli_';
+					break;
 					default:
 						$sql = null;
 					break;
 				}
 				//---------------------------------------------------------
-				// 5. Ejecución (Usamos db_exec_sql que ya mapea una sola fila al objeto)
+				// 5. Ejecución
 				if (!is_null($sql)) {
-					$data = $this->db_exec_sql($sql, true, $db, $this->db_type);
+					if (isset($ret_array) && $ret_array == true) {
+						// (Usamos db_exec_sql_array que ya mapea un array con todas las filas al objeto $data->datos)
+						$data = $this->db_exec_sql_array($sql, true, $db, ((isset($_type) && $_type != '') ? $_type : $this->db_type));
+					} else {
+						// (Usamos db_exec_sql que ya mapea una sola fila al objeto)
+						$data = $this->db_exec_sql($sql, true, $db, ((isset($_type) && $_type != '') ? $_type : $this->db_type));
+					}
 				} else {
 					$data->result = false;
 					$data->mensaje = "Tipo de consulta '{$type}' no definido.";
