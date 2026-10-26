@@ -60,7 +60,13 @@
 							</div>
 							<div class="col-sm-6">
 								<h5>Constantes</h5>
-								<div class="code-container"><pre><code><?php $html_code = file_get_contents($rut.'config/constant.php'); echo htmlspecialchars($html_code); ?></code></pre></div>
+								<div class="code-container"><pre><code><?php 
+									$html_code = file_get_contents($rut.'config/constant.php');
+									// Enmascarar credenciales sensibles para proteger el entorno
+									$html_code = preg_replace("/define\('DB_PASS',\s*'[^']*'\);/", "define('DB_PASS', '********');", $html_code);
+									$html_code = preg_replace("/define\('DB_USER',\s*'[^']*'\);/", "define('DB_USER', '********');", $html_code);
+									echo htmlspecialchars($html_code); 
+								?></code></pre></div>
 							</div>
 						</div>
 					</div>

@@ -1,0 +1,361 @@
+[
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.auth.hardcoded_session_elevation",
+    "title": "Bypass de Autenticación por Sesión Administrativa Fijada por Defecto",
+    "description": "El archivo de configuración principal inicializa automáticamente cada petición HTTP asignando un identificador de usuario y rol administrativo a la sesión superglobal, otorgando acceso completo sin autenticación.",
+    "root_cause": "Asignación incondicional de $_SESSION['user_id'] = 1 y $_SESSION['tipo_id'] = 1 en cada ejecución sin comprobar credenciales ni existencia de sesión previa.",
+    "intended_behavior": "El sistema debe verificar si existe una sesión válida previamente establecida mediante login con credenciales válidas; en caso contrario, debe denegar el acceso o redirigir al formulario de autenticación.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "config/constant.php",
+        "line": 50,
+        "scope": "global",
+        "description": "Se ejecuta en cada petición incluida por index.php o aciones/*.php."
+      },
+      {
+        "kind": "propagation",
+        "file": "config/constant.php",
+        "line": 51,
+        "scope": "global",
+        "description": "Se establece $_SESSION['user_id'] = 1 y $_SESSION['tipo_id'] = 1 incondicionalmente."
+      },
+      {
+        "kind": "sink",
+        "file": "aciones/usuarios.php",
+        "line": 74,
+        "scope": "if (isset($_SESSION['user_id']))",
+        "description": "La condición de autorización se evalúa como verdadera para cualquier atacante anónimo."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "config/constant.php",
+        "line": 50,
+        "description": "$_SESSION['user_id'] = $uid = 1;"
+      },
+      {
+        "file": "config/constant.php",
+        "line": 51,
+        "description": "$_SESSION['tipo_id'] = $rid = 1;"
+      }
+    ],
+    "conditions": [
+      "El atacante realiza una solicitud HTTP GET o POST a cualquier endpoint de la aplicación."
+    ],
+    "observed_result": "Cualquier visitante no autenticado adquiere privilegios de Administrador (Rol 1, Usuario 1) y puede crear, editar o eliminar registros.",
+    "severity": "critical",
+    "likelihood": "certain",
+    "impact": "critical",
+    "remediation": {
+      "invariant": "Las variables de sesión user_id y tipo_id solo deben poblarse tras una autenticación exitosa mediante credenciales válidas y contraseñas hasheadas.",
+      "fix": "Eliminar las líneas 50 y 51 de constant.php e implementar un flujo de autenticación formal con password_verify() y control de sesión.",
+      "regression_test": "Enviar una solicitud HTTP sin cookies de sesión a index.php y verificar que responde 401/403 o redirige a login sin poblar la sesión."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.csrf.missing_token_state_modification",
+    "title": "Falsificación de Petición en Sitios Cruzados (CSRF) en Operaciones Críticas",
+    "description": "Las acciones de adición, edición, eliminación y cambio de estado de usuarios no validan tokens anti-CSRF ni restricciones de origen, permitiendo a sitios maliciosos forzar operaciones arbitrarias a través del navegador de un usuario.",
+    "root_cause": "Falta total de generación, inclusión y validación de tokens únicos y criptográficamente seguros en formularios POST y enlaces GET de cambio de estado.",
+    "intended_behavior": "Cada solicitud mutadora de estado debe requerir un token anti-CSRF unívoco, impredecible y vinculado a la sesión del usuario.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "aciones/usuarios.php",
+        "line": 71,
+        "scope": "if (isset($_POST['nuevo']))",
+        "description": "Recepción de solicitud mutadora POST sin verificación de token."
+      },
+      {
+        "kind": "propagation",
+        "file": "aciones/usuarios.php",
+        "line": 191,
+        "scope": "if (isset($_REQUEST['meth']))",
+        "description": "Recepción de cambio de estado mediante GET sin ninguna protección contra invocaciones automáticas."
+      },
+      {
+        "kind": "sink",
+        "file": "aciones/usuarios.php",
+        "line": 211,
+        "scope": "$_dbs->db_edit($edit, $_tbl)",
+        "description": "Se ejecuta la mutación en la base de datos sin confirmación de origen."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "aciones/usuarios.php",
+        "line": 191,
+        "description": "if (isset($_REQUEST['meth'])) ejecuta modificaciones de estado (desactivación/activación) vía peticiones GET."
+      },
+      {
+        "file": "aciones/usuarios.php",
+        "line": 232,
+        "description": "if (isset($_POST['eliminar'])) procesa borrados lógicos sin validar origen ni token."
+      }
+    ],
+    "conditions": [
+      "La víctima tiene una sesión activa en la aplicación.",
+      "La víctima visita un enlace malicioso o un sitio web atacante que contiene un formulario auto-ejecutable o etiqueta <img> apuntando a aciones/usuarios.php."
+    ],
+    "observed_result": "Se crean, modifican, desactivan o eliminan usuarios en la base de datos sin el consentimiento ni conocimiento del usuario.",
+    "severity": "high",
+    "likelihood": "likely",
+    "impact": "high",
+    "remediation": {
+      "invariant": "Toda operación de mutación de estado debe requerir el método POST y validar un token CSRF criptográficamente seguro almacenado en sesión.",
+      "fix": "Generar $_SESSION['csrf_token'] = bin2hex(random_bytes(32)), incluirlo como campo oculto en cada formulario y validarlo con hash_equals() antes de procesar cualquier acción.",
+      "regression_test": "Enviar una solicitud POST a aciones/usuarios.php sin token o con token inválido y verificar que la petición es rechazada con código HTTP 403."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.redirect.open_redirect_url_parameter",
+    "title": "Redirección Abierta no Validada (Open Redirect)",
+    "description": "Los controladores de acción decodifican un parámetro url recibido en la petición y lo pasan directamente a la cabecera Location sin validar si pertenece al mismo dominio.",
+    "root_cause": "Uso de header('Location: ' . base64_decode($_REQUEST['url'])) sin comprobación de esquema, dominio o lista blanca.",
+    "intended_behavior": "Las redirecciones deben estar restringidas a rutas relativas internas seguras o a una lista blanca explícita de dominios confiables.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "aciones/usuarios.php",
+        "line": 209,
+        "scope": "$url = base64_decode($_REQUEST['url']);",
+        "description": "El atacante suministra una URL maliciosa codificada en base64 en el parámetro url."
+      },
+      {
+        "kind": "sink",
+        "file": "aciones/usuarios.php",
+        "line": 224,
+        "scope": "header('Location: ' . $url);",
+        "description": "La aplicación envía al navegador la orden de redirigir inmediatamente a la URL externa no confiable."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "aciones/usuarios.php",
+        "line": 92,
+        "description": "$url = base64_decode($_POST['url']); ... header('Location: '.$url);"
+      },
+      {
+        "file": "aciones/usuarios.php",
+        "line": 224,
+        "description": "header('Location: '.$url); sin validación de host."
+      }
+    ],
+    "conditions": [
+      "El atacante elabora un enlace con ?url=aHR0cHM6Ly9tYWxpY2lvc28uY29t (base64 de https://malicioso.com) y convence a la víctima de hacer clic."
+    ],
+    "observed_result": "El usuario legítimo es redirigido a un sitio externo para ataques de phishing utilizando el dominio confiable como vector.",
+    "severity": "medium",
+    "likelihood": "likely",
+    "impact": "medium",
+    "remediation": {
+      "invariant": "Las URLs de redirección deben ser rutas relativas locales validadas que comiencen con / y no con doble diagonal // o esquemas externos.",
+      "fix": "Reemplazar la redirección directa por una validación con parse_url() comprobando que el host sea nulo o coincida exactamente con $_SERVER['HTTP_HOST'].",
+      "regression_test": "Suministrar ?url=aHR0cHM6Ly9ldmlsLmNvbQ== y verificar que la redirección se bloquea y redirige a la ruta base segura."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.sqli.inadequate_escaping_and_concatenation",
+    "title": "Sanitización Inadecuada de SQL y Concatenación Dinámica de Consultas",
+    "description": "El motor de persistencia genera sentencias SQL concatenando directamente nombres de columnas y valores escapados mediante reemplazo ingenuo de comillas en lugar de sentencias preparadas parametrizadas.",
+    "root_cause": "La función custom_escape_string() solo aplica htmlspecialchars y strip_tags, mientras que get_sql() utiliza str_replace(\"'\", \"''\", ...) susceptible a evasión por barras invertidas en MySQL y concatena directamente identificadores de campo y claves primarias numéricas.",
+    "intended_behavior": "Todas las interacciones con la base de datos deben utilizar sentencias preparadas con marcadores de posición posicionales o con nombre (PDO o mysqli_stmt).",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "clases/database.php",
+        "line": 1078,
+        "scope": "public function custom_escape_string($value)",
+        "description": "La función retorna htmlspecialchars($value), lo cual no neutraliza inyecciones SQL."
+      },
+      {
+        "kind": "propagation",
+        "file": "clases/database.php",
+        "line": 2299,
+        "scope": "$clean = function($val) { return str_replace(\"'\", \"''\", $val ?? ''); };",
+        "description": "Sanitización artesanal de cadenas insuficiente frente a configuraciones estándar de MySQL."
+      },
+      {
+        "kind": "sink",
+        "file": "clases/database.php",
+        "line": 2371,
+        "scope": "$sql .= \"{$this_tid}={$json_pid};\";",
+        "description": "Concatenación directa de $json_pid sin comillas ni casteo forzado de tipos en casos específicos."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "clases/database.php",
+        "line": 1085,
+        "description": "$_temp = htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); utilizado como pretendido sanitizador SQL."
+      },
+      {
+        "file": "clases/database.php",
+        "line": 2321,
+        "description": "$sql .= \"{$key}, \"; concatenación directa de nombres de columna sin entrecomillado de identificadores."
+      }
+    ],
+    "conditions": [
+      "El atacante manipula nombres de claves o introduce caracteres de escape de barra invertida en campos procesados."
+    ],
+    "observed_result": "Alteración de la lógica sintáctica de las consultas SQL ejecutadas contra la base de datos.",
+    "severity": "high",
+    "likelihood": "likely",
+    "impact": "high",
+    "remediation": {
+      "invariant": "Ningún dato de entrada del usuario debe concatenarse directamente en la estructura del comando SQL.",
+      "fix": "Migrar get_sql y db_exec_sql a sentencias preparadas (PDO::prepare y execute con parámetros vinculados).",
+      "regression_test": "Ejecutar pruebas con entradas que contengan comillas dobles, simples y barras invertidas y constatar que no se genera ningún error sintáctico de base de datos."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.xss.unescaped_reflection_in_views",
+    "title": "Secuencias de Comandos en Sitios Cruzados (XSS) Almacenado y Reflejado",
+    "description": "Las vistas de detalle y la tabla principal imprimen los valores de nombres, apellidos y observaciones directamente en el HTML y atributos de inputs sin aplicar codificación contextual para HTML.",
+    "root_cause": "Impresión de variables directamente con <?= $call->nombres; ?> y concatenación $inf.='<td>'.$row['nombres'].'</td>'; sin htmlspecialchars().",
+    "intended_behavior": "Todo dato dinámico que se renderice en el DOM debe ser codificado contextualmente con htmlspecialchars($val, ENT_QUOTES, 'UTF-8').",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "clases/usuarios.php",
+        "line": 144,
+        "scope": "$inf.='<td>'.$row['nombres'].'</td>';",
+        "description": "Inserción de datos recuperados de la base de datos directamente en el buffer HTML."
+      },
+      {
+        "kind": "sink",
+        "file": "detalle/index.php",
+        "line": 42,
+        "scope": "<input ... value=\"<?= $call->nombres; ?>\" />",
+        "description": "Inyección en el atributo value permitiendo escape de atributo y ejecución de código script."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "detalle/index.php",
+        "line": 42,
+        "description": "value=\"<?= $call->nombres; ?>\" sin escapar."
+      },
+      {
+        "file": "clases/usuarios.php",
+        "line": 65,
+        "description": "Reflejo directo de mensajes de error de la BD: $inf.='<option value=\"No se ejecutó la consulta. Error: '.$res->error.'\">';"
+      }
+    ],
+    "conditions": [
+      "Un usuario almacena en su nombre o campo de texto un payload XSS como \"><script>alert(document.cookie)</script>.",
+      "Cualquier usuario o administrador accede a la lista o a la vista de detalle."
+    ],
+    "observed_result": "Ejecución de JavaScript arbitrario en el contexto de seguridad del navegador del usuario que visualiza el registro.",
+    "severity": "high",
+    "likelihood": "likely",
+    "impact": "high",
+    "remediation": {
+      "invariant": "Toda salida dinámica hacia el navegador debe neutralizarse mediante codificación HTML defensiva.",
+      "fix": "Reemplazar <?= $val; ?> por <?= htmlspecialchars($val ?? '', ENT_QUOTES, 'UTF-8'); ?> en todas las plantillas de vista.",
+      "regression_test": "Crear un registro con <script>alert(1)</script> y comprobar que en el DOM se renderiza literalmente como entidades HTML sin ejecutarse."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.info_exposure.database_credentials_exposed",
+    "title": "Exposición Pública de Credenciales y Archivos de Base de Datos en el Visor",
+    "description": "La página principal index.php incluye un visor de código interactivo que utiliza file_get_contents para leer constant.php y database.sql, exponiendo credenciales de conexión y esquemas a cualquier usuario.",
+    "root_cause": "Lectura y renderizado deliberado de archivos que contienen contraseñas y estructuras de base de datos sin restricción de acceso.",
+    "intended_behavior": "Los archivos de configuración y credenciales deben estar fuera del DocumentRoot web o protegidos contra lectura pública.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "index.php",
+        "line": 59,
+        "scope": "$html_code = file_get_contents($rut.'database.sql');",
+        "description": "Lectura del script SQL del sistema."
+      },
+      {
+        "kind": "sink",
+        "file": "index.php",
+        "line": 63,
+        "scope": "$html_code = file_get_contents($rut.'config/constant.php'); echo htmlspecialchars($html_code);",
+        "description": "Impresión de contraseñas, usuario de BD y nombres de esquema en el cuerpo de la respuesta HTML."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "index.php",
+        "line": 63,
+        "description": "echo htmlspecialchars($html_code) exponiendo las constantes de conexión."
+      },
+      {
+        "file": "config/constant.php",
+        "line": 28,
+        "description": "define('DB_PASS', ''); con credenciales accesibles."
+      }
+    ],
+    "conditions": [
+      "El usuario visita la raíz del sitio web index.php y despliega el acordeón 'Primero revisa esto: Base de Datos / Constantes'."
+    ],
+    "observed_result": "Divulgación total de las credenciales de base de datos, estructura de tablas y arquitectura interna.",
+    "severity": "high",
+    "likelihood": "certain",
+    "impact": "high",
+    "remediation": {
+      "invariant": "Las credenciales y esquemas de base de datos nunca deben ser legibles a través del navegador web.",
+      "fix": "Mover las credenciales a variables de entorno o archivos .env fuera de htdocs, y suprimir el renderizado del código fuente de constant.php en entornos de producción.",
+      "regression_test": "Verificar que la petición a index.php no contenga cadenas con valores de DB_PASS o DB_USER en su código fuente HTML."
+    }
+  },
+  {
+    "verdict": "confirmed",
+    "fingerprint": "vac_crud.idor.base64_pseudo_security_tampering",
+    "title": "Referencia Directa Insegura a Objetos (IDOR) Mediante Base64 Débil",
+    "description": "El identificador de registros a editar o eliminar se transmite como un string en Base64 sin firma digital ni comprobación de propiedad, permitiendo a cualquier actor modificar registros ajenos con solo alterar el ID numérico codificado.",
+    "root_cause": "Uso de base64_encode() como pretendido mecanismo de ofuscación sin control de autorización a nivel de registro.",
+    "intended_behavior": "El backend debe verificar si el usuario autenticado tiene permisos específicos sobre el recurso solicitado antes de ejecutar modificaciones o eliminaciones.",
+    "trace": [
+      {
+        "kind": "entrypoint",
+        "file": "aciones/usuarios.php",
+        "line": 199,
+        "scope": "$_tbl->pid = base64_decode($_REQUEST['pid']);",
+        "description": "El atacante cambia el valor de pid por el Base64 de cualquier otro ID objetivo."
+      },
+      {
+        "kind": "sink",
+        "file": "aciones/usuarios.php",
+        "line": 211,
+        "scope": "$_dbs->db_edit($edit,$_tbl);",
+        "description": "Se aplica la edición o eliminación sobre el registro foráneo sin validar pertenencia."
+      }
+    ],
+    "evidence": [
+      {
+        "file": "aciones/usuarios.php",
+        "line": 199,
+        "description": "$_tbl->pid = base64_decode($_REQUEST['pid']);"
+      },
+      {
+        "file": "aciones/usuarios.php",
+        "line": 240,
+        "description": "$_tbl->pid = base64_decode($_POST['pid']); en eliminación."
+      }
+    ],
+    "conditions": [
+      "El atacante codifica en base64 un identificador entero (por ejemplo, base64_encode(2) = Mg==) y lo envía en el parámetro pid."
+    ],
+    "observed_result": "Cualquier usuario puede desactivar, modificar o borrar registros pertenecientes a otros usuarios.",
+    "severity": "high",
+    "likelihood": "certain",
+    "impact": "high",
+    "remediation": {
+      "invariant": "Cada operación sobre un ID de registro debe verificar la relación de propiedad o requerir un rol con permiso explícito.",
+      "fix": "Implementar un control de acceso basado en roles o listas de control de acceso (ACL) que verifique si $_SESSION['user_id'] o su rol tienen potestad sobre ese id_u específico.",
+      "regression_test": "Simular una petición de edición con un id_u no asociado al usuario actual y comprobar que el sistema rechaza la operación."
+    }
+  }
+]

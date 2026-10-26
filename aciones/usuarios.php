@@ -70,8 +70,9 @@
 	//-----------------------------------
 		if (isset($_POST['nuevo'])) {
 			require_once($ru0.'config/constant.php');
+			verify_csrf();
 			//----------------------------------------
-			if (isset($_SESSION['user_id'])) {
+			if (isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] > 0) {
 				require($ru0.DIRCLA.$cls['dbs'].'.php');
 				require_once($ru0.DIRCLA.$cls['cl1'].'.php');
 				$_dbs = new $cls['dbs']();
@@ -83,10 +84,10 @@
 					"apellidos" => $_dbs->custom_escape_string($_POST['apellidos']),
 					"usuario" => $_dbs->custom_escape_string($_POST['usuario']),
 					"correo" => $_dbs->custom_escape_string($_POST['correo']),
-					"obs" => str_replace("'", '´', $_POST['obs']),
+					"obs" => $_dbs->custom_escape_string($_POST['obs']),
 					"created_at" => date('Y-m-d H:i:s'),
-					"id_created" => base64_decode($_POST['uid']),
-					"status" => ((isset($_POST['status'])) ? $_POST['status'] : 1),
+					"id_created" => (int)base64_decode($_POST['uid']),
+					"status" => ((isset($_POST['status'])) ? intval($_POST['status']) : 1),
 				);
 				//-----------------------------------
 				$url = base64_decode($_POST['url']);
@@ -104,24 +105,24 @@
 				//-----------------------------------
 				$_POST = null;
 				//-----------------------------------
-				header("Location: ".$url);
-				exit();
+				safe_redirect($url);
 			}else{
-				header("Location: ".E403);
-				exit();
+				http_response_code(403);
+				die("Acceso denegado (Error 403: Sesión no válida).");
 			}
 		}
 	//-----------------------------------
 		if (isset($_POST['editar'])) {
 			require_once($ru0.'config/constant.php');
+			verify_csrf();
 			//----------------------------------------
-			if (isset($_SESSION['user_id'])) {
+			if (isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] > 0) {
 				require($ru0.DIRCLA.$cls['dbs'].'.php');
 				require_once($ru0.DIRCLA.$cls['cl1'].'.php');
 				$_dbs = new $cls['dbs']();
 				$_cl1 = new $cls['cl1']();
 				//-----------------------------------
-				$_tbl->pid = base64_decode($_POST['pid']);
+				$_tbl->pid = (int)base64_decode($_POST['pid']);
 				$_tbl->success = 'edit';
 				$_tbl->danger = 'no'.$_tbl->success;
 				//----------------------------------------
@@ -131,10 +132,10 @@
 					"apellidos" => $_dbs->custom_escape_string($_POST['apellidos']),
 					"usuario" => $_dbs->custom_escape_string($_POST['usuario']),
 					"correo" => $_dbs->custom_escape_string($_POST['correo']),
-					"obs" => str_replace("'", '´', $_POST['obs']),
+					"obs" => $_dbs->custom_escape_string($_POST['obs']),
 					"updated_at" => date('Y-m-d H:i:s'),
-					"id_updated" => base64_decode($_POST['uid']),
-					"status" => ((isset($_POST['status'])) ? $_POST['status'] : 1),
+					"id_updated" => (int)$_SESSION['user_id'],
+					"status" => ((isset($_POST['status'])) ? intval($_POST['status']) : 1),
 				);
 				//-----------------------------------
 				$url = base64_decode($_POST['url']);
@@ -152,11 +153,10 @@
 				//-----------------------------------
 				$_POST = null;
 				//-----------------------------------
-				header("Location: ".$url);
-				exit();
+				safe_redirect($url);
 			}else{
-				header("Location: ".E403);
-				exit();
+				http_response_code(403);
+				die("Acceso denegado (Error 403: Sesión no válida).");
 			}
 		}
 	//-----------------------------------
@@ -190,19 +190,20 @@
 	//-----------------------------------
 		if (isset($_REQUEST['meth'])) {
 			require_once($ru0.'config/constant.php');
-			if (isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0) {
+			verify_csrf();
+			if (isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] > 0) {
 				require($ru0.DIRCLA.$cls['dbs'].'.php');
 				require_once($ru0.DIRCLA.$cls['cl1'].'.php');
 				$_dbs = new $cls['dbs']();
 				$_cl1 = new $cls['cl1']();
 				//-----------------------------------
-				$_tbl->pid = base64_decode($_REQUEST['pid']);
+				$_tbl->pid = (int)base64_decode($_REQUEST['pid']);
 				$_tbl->success = (($_REQUEST['meth']=="act") ? 'active' : 'desactive');
 				$_tbl->danger = 'no'.$_tbl->success;
 				//-----------------------------------
 				$edit = array(
 					"updated_at" => date('Y-m-d H:i:s'),
-					"id_updated" => $_SESSION['user_id'],
+					"id_updated" => (int)$_SESSION['user_id'],
 					"status" => (($_REQUEST['meth']=="act") ? 1 : 0),
 				);
 				//-----------------------------------
@@ -221,30 +222,30 @@
 				//-----------------------------------
 				$_REQUEST = null;
 				//-----------------------------------
-				header("Location: ".$url);
-				exit();
+				safe_redirect($url);
 			}else{
-				header("Location: ".E403);
-				exit();
+				http_response_code(403);
+				die("Acceso denegado (Error 403: Sesión no válida).");
 			}
 		}
 	//-----------------------------------
 		if (isset($_POST['eliminar'])) {
 			require_once($ru0.'config/constant.php');
-			if (isset($_SESSION['user_id']) && $_SESSION['user_id'] > 0) {
+			verify_csrf();
+			if (isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] > 0) {
 				require($ru0.DIRCLA.$cls['dbs'].'.php');
 				require_once($ru0.DIRCLA.$cls['cl1'].'.php');
 				$_dbs = new $cls['dbs']();
 				$_cl1 = new $cls['cl1']();
 				//-----------------------------------
-				$_tbl->pid = base64_decode($_POST['pid']);
+				$_tbl->pid = (int)base64_decode($_POST['pid']);
 				$_tbl->success = 'drop';
 				$_tbl->danger = 'no'.$_tbl->success;
 				//-----------------------------------
 				$drop = array(
-					"motivo_drop" => str_replace("'", '´', $_POST['motivo_drop']),
+					"motivo_drop" => $_dbs->custom_escape_string($_POST['motivo_drop']),
 					"drop_at" => date('Y-m-d H:i:s'),
-					"id_drop" => base64_decode($_POST['uid']),
+					"id_drop" => (int)base64_decode($_POST['uid']),
 					"status" => 2,
 				);
 				//-----------------------------------
@@ -263,11 +264,10 @@
 				//-----------------------------------
 				$_POST = null;
 				//-----------------------------------
-				header("Location: ".$url);
-				exit();
+				safe_redirect($url);
 			}else{
-				header("Location: ".E403);
-				exit();
+				http_response_code(403);
+				die("Acceso denegado (Error 403: Sesión no válida).");
 			}
 		}
 	//-----------------------------------

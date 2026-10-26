@@ -34,18 +34,19 @@
                     <div class="col-sm-6">
                         <div class="form-group">
                             <label for="nombres">Nombre</label>
-                            <input type="text" class="form-control" id="nombre" name="nombre" value="<?= $call->nombre; ?>" />
+                            <input type="text" class="form-control" id="nombre" name="nombre" value="<?= htmlspecialchars($call->nombre ?? '', ENT_QUOTES, 'UTF-8'); ?>" />
                         </div>
                     </div>
                     <div class="col-sm-12">
                         <div class="form-group">
                             <label for="obs">Observaciones</label>
-                            <textarea class="form-control" id="obs" name="obs"><?= $call->obs; ?></textarea>
+                            <textarea class="form-control" id="obs" name="obs"><?= htmlspecialchars($call->obs ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="card-footer">
+                <?= csrf_field(); ?>
                 <input type="hidden" name="pid" value="<?= base64_encode($pid); ?>" />
                 <input type="hidden" name="uid" value="<?= base64_encode($uid); ?>" />
                 <input type="hidden" name="url" value="<?= base64_encode($location); ?>" />

@@ -60,6 +60,7 @@
 						</div>
 					</div>
 					<div class="modal-footer">
+						<?= csrf_field(); ?>
 						<input type="hidden" name="uid" value="<?= base64_encode($uid); ?>" />
 						<input type="hidden" name="url" value="<?= base64_encode($location); ?>" />
 						<button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
@@ -98,6 +99,7 @@
 						</div>
 					</div>
 					<div class="modal-footer">
+						<?= csrf_field(); ?>
 						<input type="hidden" id="eliminar_pid" name="pid" />
 						<input type="hidden" name="uid" value="<?= base64_encode($uid); ?>" />
 						<input type="hidden" name="url" value="<?= base64_encode($location); ?>" />
@@ -114,6 +116,6 @@
 		var inf = dats.split('||');
 		//---------------------------------
 		$( "#eliminar_pid" ).val(inf[0]);
-		$( "#eliminar_title" ).html(atob(inf[1]));
+		$( "#eliminar_title" ).text(atob(inf[1]));
 	}
 </script>

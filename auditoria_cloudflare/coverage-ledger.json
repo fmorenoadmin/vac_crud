@@ -1,0 +1,65 @@
+{
+  "run_id": "run-001",
+  "target": "e:/xampp/htdocs/vac_crud",
+  "repo": "vac_crud",
+  "profile": "standard",
+  "generated_at": "2026-10-26T10:20:00Z",
+  "units": [
+    {
+      "unit_id": "auth-session-hardcoded",
+      "surface": "config/constant.php",
+      "boundary": "TB-1: Autenticación Web",
+      "attack_class": "cwe-287-authentication-bypass",
+      "status": "covered",
+      "findings": ["FIND-001"]
+    },
+    {
+      "unit_id": "state-changes-csrf",
+      "surface": "aciones/usuarios.php",
+      "boundary": "TB-2: Integridad de Operaciones",
+      "attack_class": "cwe-352-cross-site-request-forgery",
+      "status": "covered",
+      "findings": ["FIND-002"]
+    },
+    {
+      "unit_id": "redirection-open-redirect",
+      "surface": "aciones/usuarios.php",
+      "boundary": "TB-4: Redirección de Navegación",
+      "attack_class": "cwe-601-open-redirect",
+      "status": "covered",
+      "findings": ["FIND-003"]
+    },
+    {
+      "unit_id": "database-sql-injection",
+      "surface": "clases/database.php",
+      "boundary": "TB-3: Validación de Parámetros",
+      "attack_class": "cwe-89-sql-injection",
+      "status": "covered",
+      "findings": ["FIND-004"]
+    },
+    {
+      "unit_id": "view-rendering-xss",
+      "surface": "detalle/index.php",
+      "boundary": "TB-5: Renderizado en el DOM",
+      "attack_class": "cwe-79-cross-site-scripting",
+      "status": "covered",
+      "findings": ["FIND-005"]
+    },
+    {
+      "unit_id": "credentials-exposure",
+      "surface": "index.php",
+      "boundary": "TB-1: Exposición de Información Sensible",
+      "attack_class": "cwe-200-information-exposure",
+      "status": "covered",
+      "findings": ["FIND-006"]
+    },
+    {
+      "unit_id": "idor-base64-obfuscation",
+      "surface": "aciones/usuarios.php",
+      "boundary": "TB-3: Control de Acceso por ID",
+      "attack_class": "cwe-639-insecure-direct-object-reference",
+      "status": "covered",
+      "findings": ["FIND-007"]
+    }
+  ]
+}

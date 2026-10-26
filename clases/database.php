@@ -1076,15 +1076,17 @@
 				return $str;
 			}
 			public function custom_escape_string($value) {
+				if (is_null($value)) return null;
 				// Paso 1: Decodificar entidades HTML (&amp;, &lt;, etc.)
-				$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+				$value = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
 				//---------------------------------------------------------
-				// Eliminar etiquetas HTML y PHP
+				// Paso 2: Eliminar etiquetas HTML y PHP potencialmente peligrosas
 				$value = strip_tags($value);
 				//---------------------------------------------------------
-				$_temp = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+				// Paso 3: Escapar comillas y barras invertidas para evitar inyecciones SQL en consultas
+				$escaped = str_replace(['\\', "'"], ['\\\\', "''"], $value);
 				//---------------------------------------------------------
-				return $_temp;
+				return $escaped;
 			}
 			public function calc_cod_txt($pid,$largo=11) {
 				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo tu switch en 1 línea
@@ -2294,11 +2296,16 @@
 			){
 				$sql = "";
 				//---------------------------------------------------------
-				// Helper local para escapar comillas simples (SQL Injection básico)
-				// Reemplaza ' por '' (estándar SQL)
+				// Helper local para escapar comillas simples y barras invertidas (estándar SQL y MySQL)
 				$clean = function($val) {
-					return str_replace("'", "''", $val ?? '');
+					if (is_null($val)) return '';
+					return str_replace(['\\', "'"], ['\\\\', "''"], (string)$val);
 				};
+				$clean_id = function($ident) {
+					return preg_replace('/[^a-zA-Z0-9_]/', '', (string)$ident);
+				};
+				$this_table = $clean_id($this_table);
+				if (!empty($this_tid)) $this_tid = $clean_id($this_tid);
 				//---------------------------------------------------------
 				switch ($tipo) {
 					case 1://GENERAR SENTENCIA INSERT
@@ -2368,7 +2375,8 @@
 								$sql .= "{$adic} AND ";
 							}
 						//-----------fin-campos-adicionale---------
-						$sql .= "{$this_tid}={$json_pid};";
+						$clean_pid = is_numeric($json_pid) ? (int)$json_pid : "'" . $clean($json_pid) . "'";
+						$sql .= "{$this_tid}={$clean_pid};";
 					break;
 					case 6://GENERRAR SENTENCIA PARA LISTAR TODO
 						$sql = "SELECT * FROM {$this_table};";

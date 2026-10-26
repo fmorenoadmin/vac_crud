@@ -62,7 +62,7 @@
 					//--------------------------------
 					$fc_fre_r($res->res);
 				}else{
-					$inf.='<option value="No se ejecutó la consulta. Error: '.$res->error.'">';
+					$inf.='<option value="No se pudo cargar la información">';
 				}
 				//--------------------------------
 				$fc_close($this->connect());
@@ -80,12 +80,12 @@
 				$res = $this->db_exec($sql);
 				if ($res->result==true && $res->cant > 0) {
 					while ($row = $fc_assoc($res->res)){
-						$inf .= '<option value="'.base64_encode($row[$this->tid]).'">'.$row['nombre_tipo'].' - '.$row['id_int'].' - '.$row['nombre_comp'].'</option>';
+						$inf .= '<option value="'.base64_encode($row[$this->tid]).'">'.htmlspecialchars($row['nombre_tipo'].' - '.$row['id_int'].' - '.$row['nombre_comp'], ENT_QUOTES, 'UTF-8').'</option>';
 					}
 					//--------------------------------
 					$fc_fre_r($res->res);
 				}else{
-					$inf .= '<option value="'.base64_encode(0).'">No se obtivo la información. Error: '.$res->error.'</option>';
+					$inf .= '<option value="'.base64_encode(0).'">No se obtuvo la información.</option>';
 				}
 				//--------------------------------
 				$fc_close($this->connect());
@@ -140,25 +140,26 @@
 										$inf .= '</button>';
 									}
 								$inf.='</td>';
-								$inf.='<td>'.$row['nombre_tipo'].'</td>';
-								$inf.='<td>'.$row['nombres'].'</td>';
-								$inf.='<td>'.$row['apellidos'].'</td>';
-								$inf.='<td>'.$row['usuario'].'</td>';
-								$inf.='<td>'.$row['correo'].'</td>';
-								$inf.='<td>'.$row['obs'].'</td>';
-								$inf.='<td>'.$row['created_at'].'</td>';
-								$inf.='<td>'.$row['updated_at'].'</td>';
+								$inf.='<td>'.htmlspecialchars($row['nombre_tipo'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['nombres'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['apellidos'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['usuario'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['correo'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['obs'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['created_at'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
+								$inf.='<td>'.htmlspecialchars($row['updated_at'] ?? '', ENT_QUOTES, 'UTF-8').'</td>';
 								$inf.='<td>';
+									$csrf_param = '&csrf_token='.urlencode(csrf_token());
 									if ($rid==1 || $rid==2) {
 										switch ($status) {
 											case 1:
-												$inf.='<a href="'.ACTI.$this->actio.'?pid='.base64_encode($row[$this->tid]).'&meth=des&url='.base64_encode($url).'" class="btn btn-xs btn-block btn-outline-success btn-flat"><i class="fas fa-check-circle"></i></a> ';
+												$inf.='<a href="'.ACTI.$this->actio.'?pid='.base64_encode($row[$this->tid]).'&meth=des&url='.base64_encode($url).$csrf_param.'" class="btn btn-xs btn-block btn-outline-success btn-flat" title="Desactivar"><i class="fas fa-check-circle"></i></a> ';
 											break;
 											case 2:
-												$inf.='<a href="'.ACTI.$this->actio.'?pid='.base64_encode($row[$this->tid]).'&meth=act&url='.base64_encode($url).'" class="btn btn-xs btn-block btn-outline-danger btn-flat"><i class="fas fa-times-circle"></i></a> ';
+												$inf.='<a href="'.ACTI.$this->actio.'?pid='.base64_encode($row[$this->tid]).'&meth=act&url='.base64_encode($url).$csrf_param.'" class="btn btn-xs btn-block btn-outline-danger btn-flat" title="Activar"><i class="fas fa-times-circle"></i></a> ';
 											break;
 											default:
-												$inf.='<a href="'.ACTI.$this->actio.'?pid='.base64_encode($row[$this->tid]).'&meth=act&url='.base64_encode($url).'" class="btn btn-xs btn-block btn-outline-warning btn-flat"><i class="fas fa-ban"></i></a> ';
+												$inf.='<a href="'.ACTI.$this->actio.'?pid='.base64_encode($row[$this->tid]).'&meth=act&url='.base64_encode($url).$csrf_param.'" class="btn btn-xs btn-block btn-outline-warning btn-flat" title="Activar"><i class="fas fa-ban"></i></a> ';
 											break;
 										}
 									}else{

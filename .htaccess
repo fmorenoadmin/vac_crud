@@ -1,0 +1,8 @@
+# Desactivar listado de directorios en Apache
+Options -Indexes
+
+# Proteger archivos sensibles contra acceso directo por navegador
+<FilesMatch "^(database\.sql|composer\.(json|lock)|\.git.*|\.env.*)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
