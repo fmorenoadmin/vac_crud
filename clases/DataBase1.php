@@ -654,7 +654,72 @@
 				//---------------------------------------------------------
 				return $data;
 			}
+			public function get_primary_key($tabla) {
+				//-- Obtiene la PRIMARY KEY de forma universal para MySQL, PostgreSQL, SQL Server y Oracle
+				// Detectamos el motor desde la conexión (ajusta según cómo guardes el driver en tu clase)
+				// Asumiremos que tienes una propiedad $this->driver o similar.
+				$driver = $this->db_type;
+				//---------------------------------------------------------
+				switch ($driver) {
+					case 'mysql_':
+						$sql = "SELECT COLUMN_NAME 
+								FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+								WHERE TABLE_NAME = '$tabla' AND CONSTRAINT_NAME = 'PRIMARY' 
+								AND TABLE_SCHEMA = DATABASE() LIMIT 1";
+					break;
+					case 'pgsql_':
+						$sql = "SELECT a.attname AS COLUMN_NAME
+								FROM pg_index i
+								JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+								WHERE i.indrelid = '$tabla'::regclass AND i.indisprimary LIMIT 1";
+					break;
+					case 'sqlsrv_':
+						$sql = "SELECT COLUMN_NAME
+								FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+								WHERE OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_SCHEMA + '.' + CONSTRAINT_NAME), 'IsPrimaryKey') = 1
+								AND TABLE_NAME = '$tabla'";
+					break;
+					case 'oci_':
+						$sql = "SELECT column_name FROM all_cons_columns 
+								WHERE constraint_name = (
+									SELECT constraint_name FROM all_constraints 
+									WHERE table_name = UPPER('$tabla') AND constraint_type = 'P'
+								) AND ROWNUM = 1";
+					break;
+					default:
+						return 'id'; // Valor por defecto si no se reconoce el motor
+				}
+				//---------------------------------------------------------
+				$res = $this->db_exec_sql_array($sql);
+				//---------------------------------------------------------
+				return (isset($res[0]->COLUMN_NAME)) ? $res[0]->COLUMN_NAME : 'id';
+			}
 		//---------------------------------------------------------UTILIDADES
+			function validarTurnstile($token) {
+				// FUNCIÓN PARA VERIFICAR EL TOKEN DE TURNSTILE
+				$turnstile_verify_url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+				//---------------------------------------------------------
+				// Datos que se enviarán a Cloudflare para la verificación
+				$post_data = http_build_query([
+					'secret'   => TURNSTILE_SECRET_KEY,
+					'response' => $token,
+					'remoteip' => $_SERVER['REMOTE_ADDR'] // IP del usuario
+				]);
+				//---------------------------------------------------------
+				// Usamos cURL para hacer la petición POST a Cloudflare
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $turnstile_verify_url);
+				curl_setopt($ch, CURLOPT_POST, 1);
+				curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+				//---------------------------------------------------------
+				$response = curl_exec($ch);
+				//curl_close($ch);
+				//---------------------------------------------------------
+				// Decodificamos la respuesta JSON de Cloudflare
+				return json_decode($response);
+			}
 			public function cal_fecha($fecha){
 				if (is_null($fecha)) {
 					return '<span class="btn btn-outline-info btn-xs">Sin Fecha</span>';
@@ -846,6 +911,25 @@
 				//-----------------------------------
 				return $nueva_fecha;
 			}
+			public function form_hora($hora){
+				// Si la hora es nula, asignar la hora actual en formato HH:MM:SS
+				if (is_null($hora)) {
+					$hora = date('H:i:s');
+				}
+				//-----------------------------------
+				// Verificar si la hora tiene el formato HH:MM:SS
+				$hora_formato_hms = DateTime::createFromFormat('H:i:s', $hora);
+				//-----------------------------------
+				if ($hora_formato_hms !== false) {
+					// Si es formato HH:MM:SS, conservar la hora tal cual
+					$nueva_hora = $hora_formato_hms->format('H:i:s');
+				} else {
+					// Si no es formato HH:MM:SS, asumimos que ya está en formato correcto
+					$nueva_hora = $hora;
+				}
+				//-----------------------------------
+				return $nueva_hora;
+			}
 			public function form_float($numero, $cant=2){
 				// Limpieza robusta: acepta "1.000,50" o "1000.50"
 				$numero = trim((string)$numero); // Aseguramos string
@@ -989,56 +1073,18 @@
 				//---------------------------------------------------------
 				return $str;
 			}
-			public function dividir_str_dos($cadena, $test=false, $longitud = 30) {
-				// Paso 1: Asegurarse de que la cadena esté en UTF-8
-				$cadena = mb_convert_encoding($cadena, 'UTF-8', 'UTF-8');
-				if ($test) { error_log("Después de convertir a UTF-8: " . $cadena); }
-				//---------------------------------------------------------
-				// Paso 2: Decodificar entidades HTML (&amp;, &lt;, etc.)
-				$cadena = html_entity_decode($cadena, ENT_QUOTES | ENT_HTML401, 'UTF-8');
-				if ($test) { error_log("Después de decodificar entidades HTML: " . $cadena); }
-				//---------------------------------------------------------
-				// Paso 3: Eliminar todas las etiquetas HTML
-				$cadena_limpia = strip_tags($cadena);
-				if ($test) { error_log("Después de eliminar etiquetas HTML: " . $cadena_limpia); }
-				//---------------------------------------------------------
-				// Paso 4: Eliminar espacios en blanco adicionales al principio y al final
-				$cadena_limpia = trim($cadena_limpia);
-				if ($test) { error_log("Después de trim: " . $cadena_limpia); }
-				//---------------------------------------------------------
-				// Validar si la cadena está vacía después de ser limpiada
-				if (empty($cadena_limpia)) {
-					error_log("dividir_str_dos: La cadena está vacía después de procesarla.");
-					return [];
-				}
-				//---------------------------------------------------------
-				// Paso 5: Dividir la cadena en partes de la longitud especificada
-				if (function_exists('mb_str_split')) {
-					$partes = mb_str_split($cadena_limpia, $longitud, 'UTF-8'); // Mejor manejo de multibyte
-				} else {
-					$partes = str_split($cadena_limpia, $longitud); // Alternativa para versiones más viejas
-				}
-				if ($test) { error_log("Partes divididas: " . json_encode($partes)); }
-				//---------------------------------------------------------
-				foreach ($partes as $key => $value) {
-					// Paso 6: parsear todos los caracteres a html
-					$partes[$key] = htmlspecialchars($value, ENT_QUOTES | ENT_HTML401, 'UTF-8');
-				}
-				//---------------------------------------------------------
-				if ($test) { error_log("Partes procesadas para SAP: ".json_encode($partes)); }
-				// Paso 7: Retornar el array con las partes limpias
-				return $partes;
-			}
 			public function custom_escape_string($value) {
+				if (is_null($value)) return null;
 				// Paso 1: Decodificar entidades HTML (&amp;, &lt;, etc.)
-				$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+				$value = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
 				//---------------------------------------------------------
-				// Eliminar etiquetas HTML y PHP
+				// Paso 2: Eliminar etiquetas HTML y PHP potencialmente peligrosas
 				$value = strip_tags($value);
 				//---------------------------------------------------------
-				$_temp = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+				// Paso 3: Escapar comillas y barras invertidas para evitar inyecciones SQL en consultas
+				$escaped = str_replace(['\\', "'"], ['\\\\', "''"], $value);
 				//---------------------------------------------------------
-				return $_temp;
+				return $escaped;
 			}
 			public function calc_cod_txt($pid,$largo=11) {
 				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo tu switch en 1 línea
@@ -1058,25 +1104,19 @@
 				//---------------------------------------------------------
 				return $mes_txt;
 			}
-			public function get_drop_duplic(array $array, array $keys = [], bool $idem = true): array {
-				$unicos = [];
-				foreach ($array as $elemento) {
-					$clave = $idem ? serialize($elemento) : implode('_', array_intersect_key($elemento, array_flip($keys)));
-					$unicos[$clave] = $elemento;
-				}
-				return array_values($unicos);
-			}
-			//---------------------------------------------------------
-			public function calc_codigo($pid,$largo=11){
-				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo tu switch en 1 línea
-				// Rellena con '0' a la izquierda hasta llegar a longitud 11 (según tu lógica original)
-				//-----------------------------------
-				$pid = intval($pid);
-				$cod = null;
-				//-----------------------------------
-				$cod = str_pad($pid, $largo, '0', STR_PAD_LEFT);
-				//-----------------------------------
-				return $cod;
+			public function mayus_tilds($txt){
+				$tmp = $txt;
+				//------------------------------------
+				$tmp = str_replace('á', 'Á', $tmp);
+				$tmp = str_replace('é', 'É', $tmp);
+				$tmp = str_replace('í', 'Í', $tmp);
+				$tmp = str_replace('ó', 'Ó', $tmp);
+				$tmp = str_replace('ú', 'Ú', $tmp);
+				$tmp = str_replace('ñ', 'Ñ', $tmp);
+				//------------------------------------
+				$txt = $tmp;
+				//------------------------------------
+				return $txt;
 			}
 		//---------------------------------------------------------GET
 			public function db_get_string($dt, $json, $db='con', $_db_type=null){
@@ -1321,6 +1361,84 @@
 					$this->load_other_type($tipo_actual);
 				}
 				//---------------------------------------------------------
+				return $data;
+			}
+			public function db_get_all_array($dt, $json, $db='con', $_db_type=null){
+				// LLAMAR REGISTROS EN ARRAY ASOCIATIVO / JSON
+				$tipo_actual = $this->db_type;
+				if (!is_null($_db_type)) {
+					$this->load_other_type($_db_type);
+				}
+				//---------------------------------------------------------
+				$fc_query=$this->db_query;$fc_parse=$this->db_parse;$fc_exect=$this->db_exect;$fc_error=$this->db_error;$fc_fetch=$this->db_fetch;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
+				//---------------------------------------------------------
+				$data = new stdClass(); $sql = null; $fila = array(); $datos = array();
+				$data->error = null; $n = 0;
+				//---------------------------------------------------------
+				switch ($db) {
+					case 'mkt':
+						$_cc = method_exists($this, 'conduc_mkt') ? $this->conduc_mkt() : $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+					default:
+						$_cc = $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+				}
+				//---------------------------------------------------------
+				$er = 1;
+				if (!isset($json->tname) || is_null($json->tname)) { $er = 0; }
+				if (!isset($json->tid) || is_null($json->tid)) { $er = 0; }
+				if (!isset($json->adic) || is_null($json->adic)) { $er = 0; }
+				//---------------------------------------------------------
+				if ($er == 1) {
+					$pid = isset($json->pid) ? $json->pid : null;
+					$type = isset($json->type) ? $json->type : null;
+					$sql = $this->get_sql($json->tname, $dt, $type, $json->tid, $pid, false, $json->adic);
+					$res = null;
+					if ($this->db_type == 'sqlsrv_') {
+						$res = $fc_query($_cc, $sql);
+						if (!$res && is_callable($fc_error)) { $data->error = $fc_error(); }
+					} else {
+						$res = @$fc_query($_cc, $sql);
+						if (!$res && is_callable($fc_error)) { $data->error = $fc_error($_cc); }
+					}
+					if ($res) {
+						$data->cant = (($this->db_type == 'mysqli_') ? (isset($res->$fc_num_r) ? $res->$fc_num_r : 0) : (is_callable($fc_num_r) ? $fc_num_r($res) : 0));
+						if ($data->cant > 0) {
+							$data->result = true;
+							$data->mensaje = "Registros encontrados exitosamente.";
+							while ($row = $fc_assoc($res)) {
+								$fila = $row;
+								array_push($datos, $fila);
+								$n++;
+							}
+							$row = null;
+						} else {
+							$data->result = false;
+							$data->mensaje = "La respuesta está vacía.";
+						}
+						if (is_callable($fc_fre_r)) { $fc_fre_r($res); }
+					} else {
+						$data->result = false;
+						$data->mensaje = "No se encontró coincidencia para el criterio especificado.";
+					}
+				} else {
+					$data->result = false;
+					$data->mensaje = "Faltan parámetros requeridos (tname, tid o adic).";
+				}
+				//---------------------------------------------------------
+				$data->rows = $n;
+				$data->inf = json_encode($datos);
+				if (isset($json->test) && $json->test == true) {
+					$data->sql = $sql;
+					$data->input = $json;
+				}
+				//---------------------------------------------------------
+				if (is_callable($fc_close) && $_cc) {
+					$fc_close($_cc);
+				}
+				if (!is_null($_db_type)) {
+					$this->load_other_type($tipo_actual);
+				}
 				return $data;
 			}
 			public function db_get_cant($dt, $json, $db='con', $_db_type=null){
@@ -2023,10 +2141,10 @@
 				$r = 0; // Total editados con éxito
 				//---------------------------------------------------------
 				// 4. Validación Global
-				if(empty($json->tname) || empty($json->tid) || empty($json->pid)){
+				if(empty($json->tname) || empty($json->tid)){
 					$result[] = array(
 						"result"  => false,
-						"mensaje" => "Faltan datos de configuración (tname, tid o pid)."
+						"mensaje" => "Faltan datos de configuración (tname, tid)."
 					);
 					//---------------------------------------------------------
 					$data->res = $result;
@@ -2056,7 +2174,9 @@
 					//---------------------------------------------------------
 					if ($valid_row) {
 						// Generamos SQL UPDATE para esta fila
-						$id_valor = isset($fila[$json->t_camp]) ? $fila[$json->t_camp] : null;
+						//---------------------------------------------------------
+						$id_valor = $fila[$json->t_camp];
+						//---------------------------------------------------------
 						unset($fila[$json->t_camp]);
 						//---------------------------------------------------------
 						if ($id_valor) {
@@ -2162,6 +2282,110 @@
 				return $data;
 			}
 		//---------------------------------------------------------PREDETERMINADO
+			public function db_add_all_ret($dt, $json, $db='con', $_db_type=null){
+				// INSERTAR REGISTROS MASIVOS RETORNANDO ID (TID)
+				$tipo_actual = $this->db_type;
+				if (!is_null($_db_type)) {
+					$this->load_other_type($_db_type);
+				}
+				//---------------------------------------------------------
+				$fc_query=$this->db_query;$fc_parse=$this->db_parse;$fc_exect=$this->db_exect;$fc_error=$this->db_error;$fc_fetch=$this->db_fetch;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
+				//---------------------------------------------------------
+				$data = new stdClass(); $sql = null; $result = array(); $fila_res = array(); $rows_add = 0;
+				$data->error = null;
+				//---------------------------------------------------------
+				switch ($db) {
+					case 'mkt':
+						$_cc = method_exists($this, 'conduc_mkt') ? $this->conduc_mkt() : $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+					default:
+						$_cc = $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+				}
+				//---------------------------------------------------------
+				$er = 1; $n = 0;
+				if (!isset($json->tname) || is_null($json->tname)) { $er = 0; }
+				$tid = isset($json->tid) ? $json->tid : 'id';
+				$t_camp = isset($json->t_camp) ? $json->t_camp : null;
+				//---------------------------------------------------------
+				if ($er == 1 && is_array($dt)) {
+					foreach ($dt as $fila) {
+						$fila_res = array();
+						$debe_insertar = is_null($t_camp) || (isset($fila[$t_camp]) && !is_null($fila[$t_camp]));
+						if ($debe_insertar) {
+							$sql = $this->get_sql($json->tname, $fila, 1, $tid, null, true); // inserta retornando el tid
+							try {
+								$res = null;
+								if ($this->db_type == 'sqlsrv_') {
+									$res = $fc_query($_cc, $sql);
+									if (!$res && is_callable($fc_error)) { $data->error .= $fc_error(); }
+								} else {
+									$res = @$fc_query($_cc, $sql);
+									if (!$res && is_callable($fc_error)) { $data->error .= $fc_error($_cc); }
+								}
+								if ($res) {
+									$val_tid = 0;
+									if ($this->db_type == 'pg_') {
+										$row_ret = pg_fetch_assoc($res);
+										$val_tid = isset($row_ret[$tid]) ? $row_ret[$tid] : (isset($res->$tid) ? $res->$tid : 0);
+									} else if ($this->db_type == 'mysqli_') {
+										$val_tid = mysqli_insert_id($_cc);
+									}
+									$result[] = array(
+										"result"  => true,
+										"inf"     => isset($json->success) ? $json->success : 'add',
+										$tid      => $val_tid,
+										"mensaje" => "Registro agregado exitosamente.",
+									);
+									$rows_add++;
+								} else {
+									$result[] = array(
+										"result"  => false,
+										"inf"     => isset($json->danger) ? $json->danger : 'noadd',
+										$tid      => 0,
+										"mensaje" => "No se logró agregar los datos.",
+									);
+								}
+							} catch (Exception $e) {
+								$result[] = array(
+									"result"  => false,
+									"inf"     => isset($json->danger) ? $json->danger : 'noadd',
+									$tid      => 0,
+									"mensaje" => "No se logró agregar. Ya existe un valor igual.",
+								);
+							}
+						} else {
+							$result[] = array(
+								"result"  => false,
+								"inf"     => isset($json->danger) ? $json->danger : 'noadd',
+								$tid      => 0,
+								"mensaje" => "El primer campo está vacío, por ello no se agregó la fila: " . $n,
+							);
+						}
+						$n++;
+					}
+				} else {
+					$result[] = array(
+						"result"  => false,
+						"inf"     => 'null',
+						$tid      => 0,
+						"mensaje" => "No existe el nombre de la tabla o los datos son inválidos.",
+					);
+				}
+				//---------------------------------------------------------
+				$data->res = $result;
+				$data->res_uno = isset($result[0]) ? $result[0] : null;
+				$data->rows = $n;
+				$data->rows_add = $rows_add;
+				//---------------------------------------------------------
+				if (is_callable($fc_close) && $_cc) {
+					$fc_close($_cc);
+				}
+				if (!is_null($_db_type)) {
+					$this->load_other_type($tipo_actual);
+				}
+				return $data;
+			}
 			public function get_datos($pid, $type, $db='con', $_db_type=null){
 				// 1. Gestión de Tipo
 				$tipo_actual = $this->db_type;
@@ -2249,14 +2473,19 @@
 				$json_pid=null, //valor del PK a editar. Solo usar para UPDATE
 				$return=false, //este campo indica si se retorna o no el ID del insert
 				$adic=null //campos adicionales en sentencia WHERE del UPDATE
-			){
+			 ){
 				$sql = "";
 				//---------------------------------------------------------
-				// Helper local para escapar comillas simples (SQL Injection básico)
-				// Reemplaza ' por '' (estándar SQL)
+				// Helper local para escapar comillas simples y barras invertidas (estándar SQL y MySQL)
 				$clean = function($val) {
-					return str_replace("'", "''", $val ?? '');
+					if (is_null($val)) return '';
+					return str_replace(['\\', "'"], ['\\\\', "''"], (string)$val);
 				};
+				$clean_id = function($ident) {
+					return preg_replace('/[^a-zA-Z0-9_]/', '', (string)$ident);
+				};
+				$this_table = $clean_id($this_table);
+				if (!empty($this_tid)) $this_tid = $clean_id($this_tid);
 				//---------------------------------------------------------
 				switch ($tipo) {
 					case 1://GENERAR SENTENCIA INSERT
@@ -2326,7 +2555,8 @@
 								$sql .= "{$adic} AND ";
 							}
 						//-----------fin-campos-adicionale---------
-						$sql .= "{$this_tid}={$json_pid};";
+						$clean_pid = is_numeric($json_pid) ? (int)$json_pid : "'" . $clean($json_pid) . "'";
+						$sql .= "{$this_tid}={$clean_pid};";
 					break;
 					case 6://GENERRAR SENTENCIA PARA LISTAR TODO
 						$sql = "SELECT * FROM {$this_table};";

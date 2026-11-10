@@ -654,10 +654,8 @@
 				//---------------------------------------------------------
 				return $data;
 			}
-			/**
-			 * Obtiene la PRIMARY KEY de forma universal para MySQL, PostgreSQL, SQL Server y Oracle
-			 */
 			public function get_primary_key($tabla) {
+				//-- Obtiene la PRIMARY KEY de forma universal para MySQL, PostgreSQL, SQL Server y Oracle
 				// Detectamos el motor desde la conexión (ajusta según cómo guardes el driver en tu clase)
 				// Asumiremos que tienes una propiedad $this->driver o similar.
 				$driver = $this->db_type;
@@ -697,8 +695,8 @@
 				return (isset($res[0]->COLUMN_NAME)) ? $res[0]->COLUMN_NAME : 'id';
 			}
 		//---------------------------------------------------------UTILIDADES
-			// FUNCIÓN PARA VERIFICAR EL TOKEN DE TURNSTILE
 			function validarTurnstile($token) {
+				// FUNCIÓN PARA VERIFICAR EL TOKEN DE TURNSTILE
 				$turnstile_verify_url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 				//---------------------------------------------------------
 				// Datos que se enviarán a Cloudflare para la verificación
@@ -717,7 +715,7 @@
 				curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
 				//---------------------------------------------------------
 				$response = curl_exec($ch);
-				curl_close($ch);
+				//curl_close($ch);
 				//---------------------------------------------------------
 				// Decodificamos la respuesta JSON de Cloudflare
 				return json_decode($response);
@@ -1365,11 +1363,8 @@
 				//---------------------------------------------------------
 				return $data;
 			}
-			
-			// =========================================================
-			// LLAMAR REGISTROS EN ARRAY ASOCIATIVO / JSON
-			// =========================================================
 			public function db_get_all_array($dt, $json, $db='con', $_db_type=null){
+				// LLAMAR REGISTROS EN ARRAY ASOCIATIVO / JSON
 				$tipo_actual = $this->db_type;
 				if (!is_null($_db_type)) {
 					$this->load_other_type($_db_type);
@@ -2287,11 +2282,8 @@
 				return $data;
 			}
 		//---------------------------------------------------------PREDETERMINADO
-			
-			// =========================================================
-			// INSERTAR REGISTROS MASIVOS RETORNANDO ID (TID)
-			// =========================================================
 			public function db_add_all_ret($dt, $json, $db='con', $_db_type=null){
+				// INSERTAR REGISTROS MASIVOS RETORNANDO ID (TID)
 				$tipo_actual = $this->db_type;
 				if (!is_null($_db_type)) {
 					$this->load_other_type($_db_type);
@@ -2481,7 +2473,7 @@
 				$json_pid=null, //valor del PK a editar. Solo usar para UPDATE
 				$return=false, //este campo indica si se retorna o no el ID del insert
 				$adic=null //campos adicionales en sentencia WHERE del UPDATE
-			){
+			 ){
 				$sql = "";
 				//---------------------------------------------------------
 				// Helper local para escapar comillas simples y barras invertidas (estándar SQL y MySQL)
