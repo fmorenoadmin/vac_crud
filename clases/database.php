@@ -1365,6 +1365,87 @@
 				//---------------------------------------------------------
 				return $data;
 			}
+			
+			// =========================================================
+			// LLAMAR REGISTROS EN ARRAY ASOCIATIVO / JSON
+			// =========================================================
+			public function db_get_all_array($dt, $json, $db='con', $_db_type=null){
+				$tipo_actual = $this->db_type;
+				if (!is_null($_db_type)) {
+					$this->load_other_type($_db_type);
+				}
+				//---------------------------------------------------------
+				$fc_query=$this->db_query;$fc_parse=$this->db_parse;$fc_exect=$this->db_exect;$fc_error=$this->db_error;$fc_fetch=$this->db_fetch;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
+				//---------------------------------------------------------
+				$data = new stdClass(); $sql = null; $fila = array(); $datos = array();
+				$data->error = null; $n = 0;
+				//---------------------------------------------------------
+				switch ($db) {
+					case 'mkt':
+						$_cc = method_exists($this, 'conduc_mkt') ? $this->conduc_mkt() : $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+					default:
+						$_cc = $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+				}
+				//---------------------------------------------------------
+				$er = 1;
+				if (!isset($json->tname) || is_null($json->tname)) { $er = 0; }
+				if (!isset($json->tid) || is_null($json->tid)) { $er = 0; }
+				if (!isset($json->adic) || is_null($json->adic)) { $er = 0; }
+				//---------------------------------------------------------
+				if ($er == 1) {
+					$pid = isset($json->pid) ? $json->pid : null;
+					$type = isset($json->type) ? $json->type : null;
+					$sql = $this->get_sql($json->tname, $dt, $type, $json->tid, $pid, false, $json->adic);
+					$res = null;
+					if ($this->db_type == 'sqlsrv_') {
+						$res = $fc_query($_cc, $sql);
+						if (!$res && is_callable($fc_error)) { $data->error = $fc_error(); }
+					} else {
+						$res = @$fc_query($_cc, $sql);
+						if (!$res && is_callable($fc_error)) { $data->error = $fc_error($_cc); }
+					}
+					if ($res) {
+						$data->cant = (($this->db_type == 'mysqli_') ? (isset($res->$fc_num_r) ? $res->$fc_num_r : 0) : (is_callable($fc_num_r) ? $fc_num_r($res) : 0));
+						if ($data->cant > 0) {
+							$data->result = true;
+							$data->mensaje = "Registros encontrados exitosamente.";
+							while ($row = $fc_assoc($res)) {
+								$fila = $row;
+								array_push($datos, $fila);
+								$n++;
+							}
+							$row = null;
+						} else {
+							$data->result = false;
+							$data->mensaje = "La respuesta está vacía.";
+						}
+						if (is_callable($fc_fre_r)) { $fc_fre_r($res); }
+					} else {
+						$data->result = false;
+						$data->mensaje = "No se encontró coincidencia para el criterio especificado.";
+					}
+				} else {
+					$data->result = false;
+					$data->mensaje = "Faltan parámetros requeridos (tname, tid o adic).";
+				}
+				//---------------------------------------------------------
+				$data->rows = $n;
+				$data->inf = json_encode($datos);
+				if (isset($json->test) && $json->test == true) {
+					$data->sql = $sql;
+					$data->input = $json;
+				}
+				//---------------------------------------------------------
+				if (is_callable($fc_close) && $_cc) {
+					$fc_close($_cc);
+				}
+				if (!is_null($_db_type)) {
+					$this->load_other_type($tipo_actual);
+				}
+				return $data;
+			}
 			public function db_get_cant($dt, $json, $db='con', $_db_type=null){
 				// 1. Gestión de Tipo
 				$tipo_actual = $this->db_type;
@@ -2206,6 +2287,113 @@
 				return $data;
 			}
 		//---------------------------------------------------------PREDETERMINADO
+			
+			// =========================================================
+			// INSERTAR REGISTROS MASIVOS RETORNANDO ID (TID)
+			// =========================================================
+			public function db_add_all_ret($dt, $json, $db='con', $_db_type=null){
+				$tipo_actual = $this->db_type;
+				if (!is_null($_db_type)) {
+					$this->load_other_type($_db_type);
+				}
+				//---------------------------------------------------------
+				$fc_query=$this->db_query;$fc_parse=$this->db_parse;$fc_exect=$this->db_exect;$fc_error=$this->db_error;$fc_fetch=$this->db_fetch;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
+				//---------------------------------------------------------
+				$data = new stdClass(); $sql = null; $result = array(); $fila_res = array(); $rows_add = 0;
+				$data->error = null;
+				//---------------------------------------------------------
+				switch ($db) {
+					case 'mkt':
+						$_cc = method_exists($this, 'conduc_mkt') ? $this->conduc_mkt() : $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+					default:
+						$_cc = $this->connect((defined('SCHU') ? SCHU : null), $db, $this->db_type);
+					break;
+				}
+				//---------------------------------------------------------
+				$er = 1; $n = 0;
+				if (!isset($json->tname) || is_null($json->tname)) { $er = 0; }
+				$tid = isset($json->tid) ? $json->tid : 'id';
+				$t_camp = isset($json->t_camp) ? $json->t_camp : null;
+				//---------------------------------------------------------
+				if ($er == 1 && is_array($dt)) {
+					foreach ($dt as $fila) {
+						$fila_res = array();
+						$debe_insertar = is_null($t_camp) || (isset($fila[$t_camp]) && !is_null($fila[$t_camp]));
+						if ($debe_insertar) {
+							$sql = $this->get_sql($json->tname, $fila, 1, $tid, null, true); // inserta retornando el tid
+							try {
+								$res = null;
+								if ($this->db_type == 'sqlsrv_') {
+									$res = $fc_query($_cc, $sql);
+									if (!$res && is_callable($fc_error)) { $data->error .= $fc_error(); }
+								} else {
+									$res = @$fc_query($_cc, $sql);
+									if (!$res && is_callable($fc_error)) { $data->error .= $fc_error($_cc); }
+								}
+								if ($res) {
+									$val_tid = 0;
+									if ($this->db_type == 'pg_') {
+										$row_ret = pg_fetch_assoc($res);
+										$val_tid = isset($row_ret[$tid]) ? $row_ret[$tid] : (isset($res->$tid) ? $res->$tid : 0);
+									} else if ($this->db_type == 'mysqli_') {
+										$val_tid = mysqli_insert_id($_cc);
+									}
+									$result[] = array(
+										"result"  => true,
+										"inf"     => isset($json->success) ? $json->success : 'add',
+										$tid      => $val_tid,
+										"mensaje" => "Registro agregado exitosamente.",
+									);
+									$rows_add++;
+								} else {
+									$result[] = array(
+										"result"  => false,
+										"inf"     => isset($json->danger) ? $json->danger : 'noadd',
+										$tid      => 0,
+										"mensaje" => "No se logró agregar los datos.",
+									);
+								}
+							} catch (Exception $e) {
+								$result[] = array(
+									"result"  => false,
+									"inf"     => isset($json->danger) ? $json->danger : 'noadd',
+									$tid      => 0,
+									"mensaje" => "No se logró agregar. Ya existe un valor igual.",
+								);
+							}
+						} else {
+							$result[] = array(
+								"result"  => false,
+								"inf"     => isset($json->danger) ? $json->danger : 'noadd',
+								$tid      => 0,
+								"mensaje" => "El primer campo está vacío, por ello no se agregó la fila: " . $n,
+							);
+						}
+						$n++;
+					}
+				} else {
+					$result[] = array(
+						"result"  => false,
+						"inf"     => 'null',
+						$tid      => 0,
+						"mensaje" => "No existe el nombre de la tabla o los datos son inválidos.",
+					);
+				}
+				//---------------------------------------------------------
+				$data->res = $result;
+				$data->res_uno = isset($result[0]) ? $result[0] : null;
+				$data->rows = $n;
+				$data->rows_add = $rows_add;
+				//---------------------------------------------------------
+				if (is_callable($fc_close) && $_cc) {
+					$fc_close($_cc);
+				}
+				if (!is_null($_db_type)) {
+					$this->load_other_type($tipo_actual);
+				}
+				return $data;
+			}
 			public function get_datos($pid, $type, $db='con', $_db_type=null){
 				// 1. Gestión de Tipo
 				$tipo_actual = $this->db_type;
