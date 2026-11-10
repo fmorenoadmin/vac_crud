@@ -1,8 +1,10 @@
-esta serà la dicumentaciòn de la metodología de programación VAC con PHP Nativa, desarrollada por FMORENOADMIN, el cual compartió su Google Gems con esta cuenta: https://gemini.google.com/gem/1n10HLnr6JQpcVhxbGLR-S688JSMWwEo9?usp=sharing
+Esta es la documentación de la:
+ Estructura y Metodología de Programación VAC con PHP Nativa (7.4 - 8.5+), desarrollada por FMORENOADMIN 10720426833 (Moreno A. Frank M.), el cual compartió su Google Gems con esta cuenta: <https://gemini.google.com/gem/1n10HLnr6JQpcVhxbGLR-S688JSMWwEo9?usp=sharing>
 
 # 1. CORE Clase conectora con la Base de datos: `DataBase.php` o `database.php` (dependiendo del proyecto puede cambiar entre estos 2 archivos, es lo mismo, solo cambia el nombre en el archivo, mas no la funcionalidad)
 
 La clase `DataBase` o `database` es el motor central de la metodología **VAC** (*Vista - Acción - Clase/Modelo*). Su propósito es proporcionar una capa de abstracción polimórfica y multimotor capaz de conectarse y ejecutar operaciones de manera transparente en cuatro motores de base de datos relacionales:
+
 * **MySQL / MariaDB** (`mysqli_`)
 * **PostgreSQL** (`pg_`)
 * **SQL Server** (`sqlsrv_`)
@@ -13,6 +15,7 @@ La clase `DataBase` o `database` es el motor central de la metodología **VAC** 
 ## 1.1. Atributos de la Clase
 
 ### Conexión y Entornos
+
 * `$db_prd` / `$db_qas`: Dirección IP o Host de los servidores de Producción (`_prd`) y Pruebas (`_qas`), mapeados desde la constante `DB_HOST`.
 * `$db_name_prd` / `$db_name_qas`: Nombre de la base de datos activa, tomado de `DB_NAME`.
 * `$db_user_prd` / `$db_user_qas`: Usuario autenticado, tomado de `DB_USER`.
@@ -20,11 +23,14 @@ La clase `DataBase` o `database` es el motor central de la metodología **VAC** 
 * `$db_port`: Puerto de red de la base de datos, tomado de `DB_PORT` (por defecto `5432` en PostgreSQL / `3306` en MySQL).
 
 ### Configuración SSL/TLS
+
 * `$ssl_mode` *(bool)*: Define si la conexión requiere cifrado SSL/TLS.
 * `$ssl_key` / `$ssl_cert` / `$ssl_ca` / `$ssl_capath` / `$ssl_cipher`: Rutas de certificados de cliente, llave privada y CA.
 
 ### Diccionario de Funciones Mapeadas Polimórficas
+
 Variables protegidas que almacenan el nombre de la función nativa de PHP según el motor activo:
+
 * `$db_type`: Almacena el prefijo del motor activo (`mysqli_`, `pg_`, `sqlsrv_`, `oci_`).
 * `$db_conec`: Función para conectar (ej. `pg_connect`, `mysqli_connect`).
 * `$db_query`: Función para ejecutar consultas (ej. `pg_query`, `mysqli_query`).
@@ -39,32 +45,40 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 ## 1.2. Inicialización y Configuración
 
 ### `__construct()`
+
 * **¿Qué recibe?**: Nada (constructor sin parámetros).
 * **¿Qué hace?**: Detecta la constante global `DB_TYPE` (por defecto `'mysqli_'`) y ejecuta `$this->map_functions($this->db_type)` para cargar el diccionario de funciones nativas del motor correspondiente.
 * **¿Qué devuelve?**: Instancia del objeto `DataBase`.
 
 ### `load_other_type($_db_type)`
-* **¿Qué recibe?**: 
+
+* **¿Qué recibe?**:
   * `$_db_type` *(string, requerido)*: Prefijo del nuevo motor de BD a utilizar temporalmente (ej. `'pg_'`, `'mysqli_'`).
 * **¿Qué hace?**: Cambia dinámicamente la propiedad `$this->db_type` y recarga las funciones nativas mapped mediante `map_functions()`.
 * **¿Qué devuelve?**: `void` (nada).
 
 ### `config_ssl($key, $cert, $ca, $capath=null, $cipher=null)`
+
 * **¿Qué recibe?**: Nombres/rutas relativas de archivos de llave privada (`$key`), certificado cliente (`$cert`) y autoridad certificadora (`$ca`).
 * **¿Qué hace?**: Activa `$this->ssl_mode = true` y concatena la ruta base `$this->ruta_certs` con los nombres de archivos.
 * **¿Qué devuelve?**: `void` (nada).
 
 ### `map_functions($type)` *(Privado)*
+
 * **¿Qué recibe?**: `$type` *(string, requerido)*: Nombre del motor (`mysqli_`, `pg_`, `sqlsrv_`, `oci_`).
 * **¿Qué hace?**: Asigna las funciones nativas de PHP a las variables de clase protegidas según el motor seleccionado.
 * **¿Qué devuelve?**: `void`.
 
 ### `connect($schu=null, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**:
   * `$schu` *(string, opcional)*: Entorno `'PRD'` o `'QAS'` (por defecto lee la constante `SCHU`).
   * `$db` *(string, opcional)*: Identificador del esquema o base de datos específica (ej. `'con'`, `'vac2'`, `'vac3'`).
   * `$_db_type` *(string, opcional)*: Motor específico para esta conexión.
-* **¿Qué ejecuta?**: Construye la cadena de conexión o parámetros requeridos según el motor (`pg_connect`, `mysqli_real_connect`, `sqlsrv_connect`, `oci_connect`), aplica SSL si `$ssl_mode` está activo y establece la codificación a UTF-8.
+* **¿Qué ejecuta?**:
+  1. Resuelve las credenciales de conexión con comprobaciones y fallbacks seguros (`isset($this->$prop) ? ... : (defined(...) ? ... : default)`), asignando puerto por defecto (`3306` para MySQL, `5432` para PostgreSQL) y host (`localhost`) ante ausencia de configuración.
+  2. Construye la cadena de conexión o parámetros requeridos según el motor (`pg_connect`, `mysqli_real_connect`, `sqlsrv_connect`, `oci_connect`), aplica SSL si `$ssl_mode` está activo y establece la codificación a UTF-8.
+  3. En conexiones MySQLi por defecto, envuelve la conexión procedimental en un bloque de control `try...catch (Throwable $e)`, registrando errores en el log del sistema (`error_log("DB Connect Error: ...")`) y retornando `false` de forma segura en lugar de interrumpir la ejecución con `die()`.
 * **¿Qué devuelve?**: Recurso de conexión / objeto de conexión nativo de PHP (o `false` si falla).
 
 ---
@@ -72,6 +86,7 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 ## 1.3. Métodos Principales de Ejecución Directa (Núcleo)
 
 ### `db_exec($sql, $ret_res=true, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**:
   * `$sql` *(string, requerido)*: Sentencia SQL a ejecutar.
   * `$ret_res` *(bool, opcional, por defecto `true`)*: Indica si se debe adjuntar el recurso original de consulta en `$data->res`.
@@ -86,10 +101,11 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
   * `->mensaje` *(string)*: Descripción del estado ('Ejecutado exitosamente' o 'Error de Conexión').
 
 ### `db_exec_sql($sql, $ret_res=true, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**:
   * `$sql` *(string, requerido)*: Sentencia SQL SELECT que retorna **una sola fila**.
   * `$ret_res`, `$db`, `$_db_type`.
-* **¿Qué hace?**: Ejecuta la consulta SQL y realiza un *fetch asociativo* automático. Mapea cada columna de la fila devuelta como **propiedades directas** del objeto `$data` retornado.
+* **¿Qué hace?**: Ejecuta la consulta SQL protegiendo el caso `mysqli_` / `pg_` dentro de un bloque `try...catch (Throwable $e)` con captura segura de excepciones y verificación con `is_callable($fc_error)`. Realiza un *fetch asociativo* automático y mapea cada columna de la fila devuelta como **propiedades directas** del objeto `$data` retornado.
 * **¿Qué devuelve?**: `stdClass` objeto respuesta conteniendo:
   * `->result` *(bool)*: `true` si encontró la fila y se mapearon los campos.
   * `->cant` *(int)*: `1` si encontró registro, `0` si estuvo vacío, `-1` si falló.
@@ -97,10 +113,11 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
   * `->error` / `->mensaje`.
 
 ### `db_exec_sql_array($sql, $ret_res=true, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**:
   * `$sql` *(string, requerido)*: Consulta SQL SELECT que retorna **múltiples filas**.
   * `$ret_res`, `$db`, `$_db_type`.
-* **¿Qué hace?**: Ejecuta la consulta SQL y recorre todas las filas devueltas creando un array de arrays asociativos de manera polimórfica. Cierra la conexión automáticamente.
+* **¿Qué hace?**: Ejecuta la consulta SQL protegiendo la ejecución para `mysqli_` / `pg_` dentro de un bloque `try...catch (Throwable $e)` y `is_callable($fc_error)`. Recorre todas las filas devueltas creando un array asociativo de manera polimórfica y cierra la conexión automáticamente.
 * **¿Qué devuelve?**: `stdClass` objeto respuesta conteniendo:
   * `->result` *(bool)*: `true` si se ejecutó correctamente.
   * `->cant` *(int)*: Número de registros en la lista.
@@ -112,6 +129,7 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 ## 1.4. Generador de Consultas Dinámicas SQL
 
 ### `get_sql($this_table, $dt, $tipo=1, $this_tid=null, $json_pid=null, $return=false, $adic=null)`
+
 * **¿Qué recibe?**:
   * `$this_table` *(string)*: Nombre de la tabla o vista (ej. `'public.usuarios'`).
   * `$dt` *(array|null)*: Array asociativo de campos y valores `['campo' => 'valor']` o lista de columnas a consultar.
@@ -120,7 +138,7 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
     * `2` / `default`: `UPDATE` estándar por ID numérico (`{$this_tid}={$json_pid}`).
     * `3`: Invocación de Función / Procedimiento Almacenado `SELECT funcion('val1', 'val2')`.
     * `4`: `SELECT *` filtrado dinámicamente por los campos de `$dt` excepto metadatos de auditoría (`created_at`, `status`, etc.).
-    * `5`: `UPDATE` por ID numérico agregando condiciones adicionales `$adic` en `WHERE`.
+    * `5`: `UPDATE` por ID numérico o texto agregando condiciones adicionales `$adic` en `WHERE` (con sanitización de `$clean_pid`).
     * `6`: `SELECT * FROM tabla;` (Listar todo).
     * `7`: `UPDATE` por ID de tipo String usando `WHERE {$this_tid} LIKE '{$json_pid}'`.
     * `8`: `SELECT * FROM tabla WHERE id = (INT)` o `SELECT t1.*, c.nombre_comp AS user_add, c.correo_u AS mail_add, e.nombre_comp AS user_edit, e.correo_u AS mail_edit FROM tabla t1 LEFT OUTER JOIN public.view_users_all c ON t1.id_created=c.id_usuario LEFT OUTER JOIN public.view_users_all e ON t1.id_updated=e.id_usuario WHERE {$this_tid}={$json_pid};` (Consulta por ID entero realizando LEFT JOINs automáticos con la vista de usuarios `public.view_users_all` para adjuntar los datos del creador `user_add`/`mail_add` y del editor `user_edit`/`mail_edit`).
@@ -132,7 +150,11 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
   * `$json_pid` *(mixed|null)*: Valor de la llave primaria.
   * `$return` *(bool)*: Define si se agrega cláusula de retorno de ID insertado (`OUTPUT` / `RETURNING`).
   * `$adic` *(string|null)*: Condiciones adicionales SQL para concatenar en el `WHERE`.
-* **¿Qué hace?**: Aplica sanitización y escape de comillas simples (`str_replace("'", "''", $val)`) para prevención de inyección SQL y genera la sentencia SQL formateada respetando el motor de BD activo.
+* **¿Qué hace?**:
+  1. Aplica sanitización estricta de identificadores de tablas y columnas (`$clean_id`) mediante la expresión regular `preg_replace('/[^a-zA-Z0-9_]/', '', ...)` para prevenir inyecciones a nivel de esquema/tabla/columna.
+  2. Implementa el helper de limpieza `$clean` que escapa barras invertidas y comillas simples (`str_replace(['\\', "'"], ['\\\\', "''"], (string)$val)`).
+  3. Sanitiza el valor `$clean_pid` evaluando `is_numeric($json_pid)` para inyectar enteros seguros o cadenas escapadas en actualizaciones con condiciones adicionales.
+* **¿Qué devuelve?**: `string` conteniendo la consulta SQL lista para su ejecución.
 * **¿Qué devuelve?**: `string` conteniendo la consulta SQL lista para su ejecución.
 
 ---
@@ -140,6 +162,7 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 ## 1.5. Métodos CRUD de Alto Nivel y Consultas Polimórficas
 
 ### `get_datos($pid, $type, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**:
   * `$pid` *(mixed, requerido)*: ID, clave o término de búsqueda a consultar (numérico o texto sanitizado).
   * `$type` *(string, requerido)*: Identificador del tipo de consulta prediseñada a ejecutar:
@@ -162,31 +185,59 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 * **¿Qué devuelve?**: `stdClass` objeto respuesta con los datos mapeados o mensaje de error en caso de fallo.
 
 ### `db_get_id($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$json` objeto con `tname` (tabla), `tid` (columna ID), `pid` (valor ID numérico).
 * **¿Qué hace?**: Valida que `pid` sea numérico mayor a 0, genera la consulta con `get_sql(..., tipo=8)` (incluyendo los JOINs de auditoría de usuarios) y ejecuta `db_exec_sql()`.
 * **¿Qué devuelve?**: `stdClass` con los datos de la fila mapeados en sus propiedades directas (incluyendo `user_add`, `mail_add`, `user_edit`, `mail_edit`).
 
 ### `db_get_string($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$json` objeto con `tname`, `tid`, `pid` (valor alfanumérico string).
 * **¿Qué hace?**: Valida parámetros, genera la consulta con `get_sql(..., tipo=9)` con filtro `LIKE` (incluyendo JOINs de usuarios) y ejecuta `db_exec_sql()`.
 * **¿Qué devuelve?**: `stdClass` con la fila mapeada y metadatos de auditoría.
 
 ### `db_get_camp_id_array($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$dt` array con nombres de columnas solicitadas; `$json` con `tname`, `tid`, `pid`, `adic`.
 * **¿Qué hace?**: Genera `get_sql(..., tipo=11)` y ejecuta `db_exec_sql_array()`.
 * **¿Qué devuelve?**: `stdClass` conteniendo `->datos` array de resultados.
 
 ### `db_get_all($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$json` conteniendo `tname`, `tid`, `pid`, `col_name` (columna a mostrar).
 * **¿Qué hace?**: Consulta registros y transforma la lista devuelta a una estructura estandarizada `[ ["id" => ..., "name" => ...], ... ]` convirtiendo codificación de caracteres.
 * **¿Qué devuelve?**: `stdClass` con `->inf` array de objetos `id/name` y `->rows` total de elementos.
 
+### `db_get_all_array($dt, $json, $db='con', $_db_type=null)`
+
+* **¿Qué recibe?**:
+  * `$dt` *(array|null)*: Columnas a consultar o estructura de datos.
+  * `$json` *(object)*: Objeto con parámetros:
+    * `->tname` *(string, obligatorio)*: Nombre de la tabla o vista.
+    * `->tid` *(string, obligatorio)*: Nombre de columna para condiciones o llave primaria.
+    * `->adic` *(string, obligatorio)*: Condiciones SQL adicionales para el `WHERE`.
+    * `->pid` *(mixed, opcional)*: Valor del ID o filtro de registro.
+    * `->type` *(int, opcional)*: Tipo de sentencia SQL generada por `get_sql()`.
+    * `->test` *(bool, opcional)*: Activa el modo de depuración para adjuntar `$data->sql` y `$data->input`.
+  * `$db` *(string, opcional, por defecto `'con'`)*: Identificador de base de datos (soporta bases especiales como `'mkt'` vía `conduc_mkt()`).
+  * `$_db_type` *(string, opcional)*: Motor específico temporal.
+* **¿Qué hace?**: Construye y ejecuta dinámicamente la consulta vía `get_sql()`, valida la presencia de parámetros obligatorios (`tname`, `tid`, `adic`), itera sobre las filas asociativas, libera el cursor con `$fc_fre_r($res)` y cierra la conexión con `$fc_close($_cc)`.
+* **¿Qué devuelve?**: `stdClass` con:
+  * `->result` *(bool)*: `true` si encontró filas, `false` si está vacía o falló.
+  * `->cant` *(int)*: Filas encontradas por el cursor.
+  * `->rows` *(int)*: Total de registros mapeados.
+  * `->inf` *(string)*: Matriz de filas codificada en formato JSON `json_encode($datos)` lista para APIs o frontend.
+  * `->mensaje` *(string)*: Estado detallado de la operación.
+  * `->sql` / `->input` *(opcional)*: Información de depuración cuando `$json->test == true`.
+
 ### `db_get_cant($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$json` conteniendo `tname`.
 * **¿Qué hace?**: Ejecuta `SELECT COUNT(*) AS total FROM tabla WHERE status=1;`.
 * **¿Qué devuelve?**: `stdClass` conteniendo `->total` *(int)* con el conteo de registros activos.
 
 ### `db_get_btns($total, $pag, $url=null, $bootstrap_v=4)`
+
 * **¿Qué recibe?**:
   * `$total` *(int)*: Total de registros en la tabla.
   * `$pag` *(int)*: Página actual solicitada.
@@ -196,6 +247,7 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 * **¿Qué devuelve?**: `stdClass` conteniendo `->inf` *(string HTML del paginador)*.
 
 ### `db_add($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**:
   * `$dt` *(array)*: Matriz clave-valor con los datos a insertar.
   * `$json` *(object)*: Objeto con `tname`, `success` (mensaje éxito), `danger` (mensaje error).
@@ -203,35 +255,80 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 * **¿Qué devuelve?**: `stdClass` con `->result` *(bool)*, `->inf`, `->mensaje`.
 
 ### `db_add_ret($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: Similar a `db_add`, requiere `tname` y `tid`.
 * **¿Qué hace?**: Inserta el registro habilitando la clausula de retorno. Obtiene el ID insertado mediante el mecanismo propio de cada motor (`mysqli_insert_id`, `RETURNING`, `OUTPUT` o `SELECT MAX`).
 * **¿Qué devuelve?**: `stdClass` conteniendo `->pid` *(int, ID generado)* y estado de la operación.
 
 ### `db_add_all($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$dt` array de filas a insertar; `$json` con `tname`, `t_camp` (campo obligatorio).
 * **¿Qué hace?**: Abre una única conexión global y recorre `$dt` insertando cada fila sin reconectar por cada elemento. Optimiza el retorno para lotes grandes (>1000 registros).
 * **¿Qué devuelve?**: `stdClass` con `->rows` (total procesados), `->rows_add` (total insertados) y `->res` array de resultados por fila.
 
+### `db_add_all_ret($dt, $json, $db='con', $_db_type=null)`
+
+* **¿Qué recibe?**:
+  * `$dt` *(array)*: Matriz de arrays asociativos con múltiples filas a insertar.
+  * `$json` *(object)*: Objeto con `tname`, `tid` (PK a retornar, por defecto `'id'`), `t_camp` (campo obligatorio para validar inserción de la fila), `success` y `danger`.
+  * `$db`, `$_db_type`.
+* **¿Qué hace?**: Procesa inserciones por lotes de forma transaccional continua sobre una única conexión. Valida que `$t_camp` no esté vacío, construye sentencias con `get_sql(..., tipo=1, return=true)` y ejecuta cada inserción dentro de un bloque `try...catch (Exception $e)`. Recupera inmediatamente el ID autogenerado para cada registro (`pg_fetch_assoc` en PostgreSQL o `mysqli_insert_id` en MySQLi).
+* **¿Qué devuelve?**: `stdClass` conteniendo:
+  * `->res` *(array)*: Lista detallada de objetos con `result`, `inf`, `$tid` (ID insertado) y `mensaje` por cada fila procesada.
+  * `->res_uno` *(array|null)*: Primer elemento resultante.
+  * `->rows` *(int)*: Total de filas evaluadas.
+  * `->rows_add` *(int)*: Total de filas agregadas exitosamente.
+
 ### `db_edit($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$dt` array de campos a actualizar; `$json` con `tname`, `tid`, `pid`, `success`.
 * **¿Qué hace?**: Genera `UPDATE` mediante `get_sql(..., tipo=2)` por ID numérico y ejecuta la actualización con mensajes dinámicos de acción ('modificó', 'eliminó', 'activó', etc.).
 * **¿Qué devuelve?**: `stdClass` conteniendo `->result` y `->mensaje`.
 
 ### `db_edit_string($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: Mismos parámetros que `db_edit`, pero para IDs alfanuméricos (`string`).
 * **¿Qué hace?**: Genera `UPDATE` mediante `get_sql(..., tipo=7)` utilizando `WHERE tid LIKE 'pid'` y ejecuta la actualización.
 * **¿Qué devuelve?**: `stdClass` con resultado de la edición.
 
 ### `db_edit_all($dt, $json, $db='con', $_db_type=null)`
+
 * **¿Qué recibe?**: `$dt` array de filas a editar; `$json` con `tname`, `tid`, `pid`, `t_camp`.
 * **¿Qué hace?**: Ejecuta un bucle masivo de `UPDATE` sobre la misma conexión sin reconectar por cada fila.
 * **¿Qué devuelve?**: `stdClass` con `->rows_edit` (total editados) y resumen.
+
+### `get_primary_key($tabla)`
+
+* **¿Qué recibe?**: `$tabla` *(string)*: Nombre de la tabla a inspeccionar.
+* **¿Qué hace?**: Detecta de forma universal y polimórfica la columna Llave Primaria (Primary Key) consultando los catálogos del motor activo:
+  * **MySQL**: `INFORMATION_SCHEMA.KEY_COLUMN_USAGE` filtrando por `CONSTRAINT_NAME = 'PRIMARY'` y `TABLE_SCHEMA = DATABASE()`.
+  * **PostgreSQL**: `pg_index` y `pg_attribute` donde `indisprimary` es verdadero.
+  * **SQL Server**: `INFORMATION_SCHEMA.KEY_COLUMN_USAGE` con `OBJECTPROPERTY(..., 'IsPrimaryKey') = 1`.
+  * **Oracle**: `all_cons_columns` y `all_constraints` con `constraint_type = 'P'`.
+* **¿Qué devuelve?**: `string`: Nombre de la columna llave primaria (o `'id'` como fallback por defecto).
 
 ---
 
 ## 1.6. Funciones de Utilidad y Formateo Integradas
 
+### Seguridad y Validación
+
+* `validarTurnstile($token)`: Valida el token del captcha Cloudflare Turnstile realizando una petición HTTP POST vía cURL a `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Incorpora:
+  * Validación previa de token vacío (`empty($token)`) con retorno inmediato de objeto `->success = false`.
+  * Fallback automático para constantes de clave secreta (`TURNSTILE_SECRET_KEY` o `TURSTILE_SECRET_KEY`).
+  * Configuración explícita de timeout (`CURLOPT_TIMEOUT, 10`).
+  * Cierre garantizado de la conexión cURL (`curl_close($ch)`).
+  * Manejo seguro de decodificación JSON con respuesta de respaldo ante fallos de conexión externa.
+* `custom_escape_string($value)`: Realiza una sanitización multicapa sobre cadenas de texto para prevenir ataques XSS e inyecciones SQL en consultas manuales:
+  * Validación estricta de tipo: si es `null` o `array`, retorna inmediatamente una cadena vacía `''`.
+  * Mitigación de Null-byte injection: elimina bytes nulos con `str_replace(chr(0), '', (string)$value)`.
+  * Decodificación previa de entidades HTML con `html_entity_decode()`.
+  * Eliminación de etiquetas HTML y PHP mediante `strip_tags()`.
+  * Conversión de caracteres conflictivos a entidades HTML seguras con `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
+  * Escape final de comillas mediante `addslashes()`.
+
 ### Fechas y Tiempos
+
 * `cal_fecha($fecha)`: Compara una fecha con la fecha actual y devuelve una insignia HTML (`<span>`) clasificada según la urgencia (éxito >60 días, alerta 30-60 días, peligro <30 días, vencido en pasado).
 * `estadoFecha($fecha)`: Retorna un badge Tailwind de estado de vencimiento según la proximidad de la fecha.
 * `getMonthStartEnd($periodo, $periodo_fin=null)`: Recibe un periodo en formato `"YYYY-MM"` y devuelve un objeto con `->ini` (primer día del mes `"YYYY-MM-01"`) y `->fin` (último día del mes `"YYYY-MM-31"`).
@@ -242,6 +339,7 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 * `get_mes_txt($mes)`: Convierte el número entero de mes (1 al 12) a su representación textual en español (ej. `1` -> `'01-Enero'`).
 
 ### Formateo Numérico y Sanitización
+
 * `form_float($numero, $cant=2)`: Normaliza strings con comas/puntos europeos o americanos y devuelve un float formateado a `$cant` decimales.
 * `tofloat($num)`: Parsea una cadena limpiando caracteres no numéricos y manteniendo el separador decimal correcto.
 * `getRandomCode($tipo=8, $largo=16)`: Genera un código/token aleatorio criptográficamente seguro (`random_int`) combinando números, mayúsculas, minúsculas y símbolos según el tipo seleccionado.
@@ -250,13 +348,12 @@ Variables protegidas que almacenan el nombre de la función nativa de PHP según
 * `reemp_car_esp($texto)`: Reemplaza letras con tildes, caracteres latinos (`ñ`, `ü`, `ç`) y entidades HTML por sus equivalentes ASCII sin acento.
 * `form_txt_sap($cadena, $codic='html', $longitud=30)`: Prepara cadenas de texto para integración con SAP escapando caracteres especiales y recortando a la longitud permitida.
 * `dividir_str($cadena, $longitud=30)` / `dividir_str_dos($cadena, $test=false, $longitud=30)`: Decodifica entidades HTML, remueve etiquetas, limpia espacios y divide la cadena en fragmentos multibyte de longitud fija formateando cada fragmento para exportaciones (ej. SAP).
-* `custom_escape_string($value)`: Realiza escape de caracteres especiales sobre strings para prevenir inyecciones SQL en consultas manuales.
-* `calc_codigo($pid, $largo=11)` / `calc_cod_txt($pid, $largo=11)`: Rellena un ID numérico con ceros a la izquierda mediante `str_pad` hasta alcanzar la longitud especificada (ej. `5` -> `'00000000005'`).
+* `calc_codigo($pid, $largo=11)` / `calc_cod_txt($pid, $largo=11)`: Rellena un ID numérico (`intval($pid)`) con ceros a la izquierda de forma altamente optimizada en una sola línea utilizando `str_pad(..., $largo, '0', STR_PAD_LEFT)` hasta alcanzar la longitud especificada (ej. `5` -> `'00000000005'`).
 * `get_drop_duplic(array $array, array $keys=[], bool $idem=true)`: Elimina elementos duplicados de un array multidimensional según las llaves especificadas.
 
 # 2. CORE Estructura de las Clases del Modelo (Metodología VAC)
 
-Las clases de modelo (ubicadas en la carpeta `MORENOKU/`) representan las entidades del negocio (ej. `usuarios.php`, `paginas.php`, `tipos_usuarios.php`). 
+Las clases de modelo (ubicadas en la carpeta `MORENOKU/`) representan las entidades del negocio (ej. `usuarios.php`, `paginas.php`, `tipos_usuarios.php`).
 
 Para garantizar compatibilidad **100% independiente del motor de base de datos** (PostgreSQL, MySQL, SQL Server, Oracle) y **compatible con versiones de PHP desde la 7.4 hasta la 8.5+**, cada clase debe cumplir de forma estricta las siguientes reglas de diseño.
 
@@ -265,6 +362,7 @@ Para garantizar compatibilidad **100% independiente del motor de base de datos**
 ## 2.1. Reglas Fundamentales de Arquitectura VAC en Clases
 
 1. **Herencia Obligatoria**: Toda clase DEBE heredar de la clase `DataBase`:
+
    ```php
    class usuarios extends DataBase { ... }
    ```
@@ -274,18 +372,21 @@ Para garantizar compatibilidad **100% independiente del motor de base de datos**
 
 3. **Línea Estándar de Mapeo de Funciones**:
    Cualquier función que requiera procesar un recurso de consulta manualmente DEBE declarar en su primera línea el mapeo de variables de función:
+
    ```php
    $fc_query=$this->db_query;$fc_error=$this->db_error;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
    ```
 
 4. **Cierre de Conexión Multi-Motor Seguro**:
    Al finalizar cualquier método que maneje conexiones directas, el cierre se debe realizar mediante la sentencia condicional de compatibilidad:
+
    ```php
    if(DB_TYPE=='mysqli_'){ $fc_close($this->connect(SCHU)); }else{ $fc_close(); }
    ```
 
 5. **Interpolación Estándar de Cadenas en Consultas**:
    Las cadenas SQL deben usar la sintaxis de interpolación compleja de PHP (compatibilidad 7.4 - 8.5+):
+
    ```php
    $sql = "SELECT {$this->tid} FROM {$this->table0} WHERE status=1;";
    ```
@@ -318,10 +419,12 @@ class usuarios extends DataBase
 ## 2.3. Estructura Estándar de Métodos de la Clase
 
 ### 1. `cantidad($rid)`
+
 * **¿Qué recibe?**: `$rid` *(int)*: Rol o tipo de usuario en sesión.
 * **¿Qué hace?**: Consulta el número de registros activos en la vista `$this->table0` aplicando filtros según el nivel de privilegios del rol `$rid`.
 * **¿Qué devuelve?**: `int`: Cantidad de filas devueltas (devuelve `0` en caso de error o sin registros).
 * **Código Estructura**:
+
 ```php
 function cantidad($rid){
     $fc_query=$this->db_query;$fc_error=$this->db_error;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
@@ -344,10 +447,12 @@ function cantidad($rid){
 ---
 
 ### 2. `dtl($campo)`
+
 * **¿Qué recibe?**: `$campo` *(string)*: Nombre de la columna de la tabla/vista a autocompletar.
 * **¿Qué hace?**: Genera elementos de opciones `<option value="valor" />` para datalists de autocompletado en formularios.
 * **¿Qué devuelve?**: `string`: Cadena de texto con los elementos HTML `<option>`.
 * **Código Estructura**:
+
 ```php
 function dtl($campo){
     $fc_query=$this->db_query;$fc_error=$this->db_error;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
@@ -370,10 +475,12 @@ function dtl($campo){
 ---
 
 ### 3. `cbo($rid)` / `cboCli_all(...)` (OPCIONAL) / `cboVen()` (OPCIONAL)
+
 * **¿Qué recibe?**: `$rid` *(int)* y/o filtros del tipo de registro.
 * **¿Qué hace?**: Genera las opciones HTML para campos desplegables `<select>`, codificando las llaves primarias en Base64 (`base64_encode($row[$this->tid])`) para mayor seguridad de la interfaz.
 * **¿Qué devuelve?**: `string`: Opciones `<option value="BASE64">nombre_tipo - nombre_comp</option>`.
 * **Código Estructura**:
+
 ```php
 function cbo($rid){
     $fc_query=$this->db_query;$fc_error=$this->db_error;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
@@ -403,6 +510,7 @@ function cbo($rid){
 ---
 
 ### 4. `li_emp()` / `cbo_li_emp()` (OPCIONAL)
+
 * **¿Qué recibe?**: Ninguno o parámetros de filtro de usuario.
 * **¿Qué hace?**: Construye listas desordenadas HTML (`<li><button class="dropdown-item">...</button></li>`) para menús desplegables de selección interactiva de empleados/usuarios.
 * **¿Qué devuelve?**: `string`: Lista en formato HTML de botones item.
@@ -410,6 +518,7 @@ function cbo($rid){
 ---
 
 ### 5. `dest($rid)` (OPCIONAL)
+
 * **¿Qué recibe?**: `$rid` *(int)*: ID del tipo de usuario.
 * **¿Qué hace?**: Consulta los usuarios pertenecientes al tipo `$rid` y genera una lista de badges con nombres y correos electrónicos.
 * **¿Qué devuelve?**: `stdClass` objeto respuesta con:
@@ -419,6 +528,7 @@ function cbo($rid){
 ---
 
 ### 6. `listar($rid, $uid, $url, $act=1)`
+
 * **¿Qué recibe?**:
   * `$rid` *(int)*: Rol del usuario en sesión.
   * `$uid` *(int)*: ID del usuario creador/logueado.
@@ -429,6 +539,7 @@ function cbo($rid){
   * `->inf` *(string)*: Código HTML del `<thead>` y `<tbody>` listo para imprimir dentro de `<table>`.
   * `->sql` *(string)*: Sentencia SQL ejecutada (para depuración).
 * **Código Estructura**:
+
 ```php
 function listar($rid, $uid, $url, $act=1){
     $fc_query=$this->db_query;$fc_error=$this->db_error;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
@@ -457,6 +568,7 @@ function listar($rid, $uid, $url, $act=1){
 ---
 
 ### 7. `acceder($uid)` (OPCIONAL)
+
 * **¿Qué hace?**: Consulta todos los datos del usuario en la vista `public.view_users_all` mediante `$this->db_exec($sql)` y mapea todos los atributos como propiedades dinámicas del objeto devuelto.
 * **¿Qué devuelve?**: `stdClass` objeto conteniendo:
   * `->result` *(int)*: `1` si el usuario existe, `2` si no se encontró.
@@ -467,12 +579,14 @@ function listar($rid, $uid, $url, $act=1){
 ---
 
 ### 8. `validar_pass($pass, $uid)` (OPCIONAL)
+
 * **¿Qué recibe?**:
   * `$pass` *(string)*: Contraseña ingresada por el usuario en texto plano.
   * `$uid` *(int)*: ID del usuario a validar.
 * **¿Qué hace?**: Consulta el campo `contrasenia_u` en la BD usando `$this->db_exec_sql($sql)` y verifica el hash utilizando la función nativa segura `password_verify($pass, $hash)`.
 * **¿Qué devuelve?**: `bool`: `true` si la contraseña en texto plano coincide con el hash encriptado de la BD, `false` en caso contrario.
 * **Código Estructura**:
+
 ```php
 function validar_pass($pass, $uid){
     $contrasenia_u = null; $resp = false;
@@ -538,6 +652,7 @@ Todo controlador de acción debe comenzar definiendo el control de sesión, la r
 Son funciones globales del controlador que se incluyen directamente desde las vistas (`home/*.php`) para alimentar de datos los componentes de la interfaz.
 
 ### 1. `index($rut, $rid, $uid, $url, $tipo='user', $act=1)`
+
 * **¿Qué recibe?**:
   * `$rut` *(string)*: Ruta relativa hacia la carpeta raíz (ej. `'../../'`).
   * `$rid` *(int)*: ID del rol de usuario en sesión.
@@ -551,6 +666,7 @@ Son funciones globales del controlador que se incluyen directamente desde las vi
   * `->cboTipos` *(string)*: Opciones HTML `<option>` para desplegables.
   * `->pass_gen` *(string)*: Token o clave aleatoria autogenerada.
 * **Código Estructura**:
+
 ```php
 function index($rut, $rid, $uid, $url, $tipo='user', $act=1){
     global $cls, $data;
@@ -579,6 +695,7 @@ function index($rut, $rid, $uid, $url, $tipo='user', $act=1){
 ---
 
 ### 2. `detalle($rut, $rid, $uid, $pid, $tipo="user")`
+
 * **¿Qué recibe?**:
   * `$rut` *(string)*: Ruta relativa hacia la raíz.
   * `$rid` *(int)*: Rol del usuario.
@@ -590,6 +707,7 @@ function index($rut, $rid, $uid, $url, $tipo='user', $act=1){
   * `->call` *(stdClass)*: Atributos y campos del registro consultado en propiedades directas.
   * `->cboTipos` *(string)*: Opciones de combos desplegables para el formulario de edición. (No todas las acciones invocan cbos)
 * **Código Estructura**:
+
 ```php
 function detalle($rut, $rid, $uid, $pid, $tipo="user"){
     global $cls, $data, $json;
@@ -620,54 +738,60 @@ function detalle($rut, $rid, $uid, $pid, $tipo="user"){
 Se ejecutan cuando un formulario HTML envía datos al servidor mediante POST o cuando una solicitud URL envía variables por REQUEST.
 
 ### 1. Evento de Inserción (`if (isset($_POST['nuevo']))`)
+
 * **Condicionales de Seguridad**:
   1. Verifica que exista sesión activa `if (isset($_SESSION['user_id']))`.
   2. Procesa la subida de archivos de imagen `is_uploaded_file($_FILES["foto_u"]["tmp_name"])` sanitizando el nombre con la máscara `user-YYYYMMDDHHIISS-nombre.jpg`.
 * **Procesamiento**:
-  - Prepara el array asociativo `$add` asignando encriptación Hash con `password_hash($pass, PASSWORD_BCRYPT)`.
-  - Ejecuta la inserción vía `$_dbs->db_add($add, $_tbl)`.
-  - Si la inserción es exitosa, mueve la imagen a su directorio destino con `move_uploaded_file()`.
-  - Setea las variables de sesión de mensaje flash: `$_SESSION['SMStrue4']` (éxito) o `$_SESSION['SMSfalse4']` (error).
-  - Limpia el buffer `$_POST = null;` y redirige inmediatamente mediante `header("Location: ".$url); exit();`.
+  * Prepara el array asociativo `$add` asignando encriptación Hash con `password_hash($pass, PASSWORD_BCRYPT)`.
+  * Ejecuta la inserción vía `$_dbs->db_add($add, $_tbl)`.
+  * Si la inserción es exitosa, mueve la imagen a su directorio destino con `move_uploaded_file()`.
+  * Setea las variables de sesión de mensaje flash: `$_SESSION['SMStrue4']` (éxito) o `$_SESSION['SMSfalse4']` (error).
+  * Limpia el buffer `$_POST = null;` y redirige inmediatamente mediante `header("Location: ".$url); exit();`.
 
 ---
 
 ### 2. Evento de Edición (`if (isset($_POST['editar']))`)
+
 * **Condicionales de Seguridad**:
   1. Decodifica la llave primaria enviada en Base64: `$_tbl->pid = base64_decode($_POST['pid']);`.
   2. Valida la nueva contraseña: si tiene una longitud mayor a 5 caracteres genera un nuevo hash `password_hash()`; de lo contrario, conserva el hash anterior enviado en Base64.
   3. Procesa reemplazo de archivos de imagen manteniendo la foto actual si no se adjunta un nuevo archivo.
 * **Procesamiento**:
-  - Prepara el array asociativo `$arr` con la marca de tiempo `updated_at` y el usuario editor `id_updated`.
-  - Ejecuta la actualización vía `$_dbs->db_edit($arr, $_tbl)`.
-  - Si el usuario editado es el mismo logueado en sesión (`$_tbl->pid == $_SESSION['user_id']`), actualiza la foto de perfil en sesión `$_SESSION['user_foto']`.
-  - Asigna mensajes de sesión flash y redirige a la URL de origen.
+  * Prepara el array asociativo `$arr` con la marca de tiempo `updated_at` y el usuario editor `id_updated`.
+  * Ejecuta la actualización vía `$_dbs->db_edit($arr, $_tbl)`.
+  * Si el usuario editado es el mismo logueado en sesión (`$_tbl->pid == $_SESSION['user_id']`), actualiza la foto de perfil en sesión `$_SESSION['user_foto']`.
+  * Asigna mensajes de sesión flash y redirige a la URL de origen.
 
 ---
 
 ### 3. Evento de Cambio de Identidad / Su-User (`if (isset($_REQUEST['accd']))`)
+
 * **¿Qué hace?**: Permite a los usuarios con rol de administrador (roles `1`, `2` o `3`) asumir temporalmente la sesión de cualquier otro usuario de la plataforma.
 * **Procesamiento**:
-  - Decodifica el ID del usuario objetivo: `$uid = base64_decode(base64_decode($_REQUEST['uid']));`.
-  - Ejecuta el método `acceder()` de la clase modelo.
-  - Si el usuario existe, invoca `$_s->accedUID()` de la clase `Sesiones` para reasignar todas las variables globales de sesión y redirige a `MENU`.
+  * Decodifica el ID del usuario objetivo: `$uid = base64_decode(base64_decode($_REQUEST['uid']));`.
+  * Ejecuta el método `acceder()` de la clase modelo.
+  * Si el usuario existe, invoca `$_s->accedUID()` de la clase `Sesiones` para reasignar todas las variables globales de sesión y redirige a `MENU`.
 
 ---
 
 ### 4. Evento de Retorno de Identidad (`if (isset($_REQUEST['rev']))`)
+
 * **¿Qué hace?**: Permite al administrador volver a su cuenta original tras haber asumido la identidad de otro usuario.
 * **Procesamiento**:
-  - Verifica la variable de sesión previa `$_SESSION['ant_tipo_id']`.
-  - Invoca `$_s->regresar($uid)` de la clase `Sesiones` y redirige a `MENU`.
+  * Verifica la variable de sesión previa `$_SESSION['ant_tipo_id']`.
+  * Invoca `$_s->regresar($uid)` de la clase `Sesiones` y redirige a `MENU`.
 
 ---
 
 ### 5. Eventos de Petición AJAX (`if (isset($_POST['consulta']))` / `if (isset($_POST['buscar']))`)
+
 * **¿Qué hace?**: Responde a llamadas asíncronas de JavaScript entregando datos filtrados en formato JSON.
 * **Procesamiento**:
-  - Valida la sesión del usuario.
-  - Ejecuta la consulta requerida a través de la clase API o con `$_dbs->db_get_string()`.
-  - Emite los encabezados HTTP JSON y retorna la respuesta serializada:
+  * Valida la sesión del usuario.
+  * Ejecuta la consulta requerida a través de la clase API o con `$_dbs->db_get_string()`.
+  * Emite los encabezados HTTP JSON y retorna la respuesta serializada:
+
 ```php
 header("Content-Type: application/json; charset: UTF-8;");
 echo json_encode($dt);
@@ -697,6 +821,7 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/index.php`,
 
 1. **PROHIBICIÓN TOTAL DE BUCLES EN LA VISTA**:
    **QUEDA TOTALMENTE PROHIBIDO** usar bucles (`while`, `foreach`, `for`) dentro del archivo HTML de la vista. Todo el recorrido de registros y la construcción de filas `<tr>` y columnas `<td>` se procesa previamente dentro del método `listar()` de la Clase Modelo. La vista únicamente imprime el resultado directo pre-generado mediante:
+
    ```html
    <table id="example1" class="dataTable table table-bordered table-hover">
        <?= $inf->inf; $inf->inf=null; ?>
@@ -704,8 +829,9 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/index.php`,
    ```
 
 2. **Compatibilidad Estricta (PHP 7.4 - 8.5+)**:
-   - Inicialización limpia de variables antes de llamar al controlador (`$data=null; $inf=null;`).
-   - Verificación defensiva de la existencia de propiedades devueltas para evitar cierres o crashes `TypeError` en PHP 8.2+:
+   * Inicialización limpia de variables antes de llamar al controlador (`$data=null; $inf=null;`).
+   * Verificación defensiva de la existencia de propiedades devueltas para evitar cierres o crashes `TypeError` en PHP 8.2+:
+
      ```php
      if (isset($data->inf)) {
          $inf = $data->inf;
@@ -716,9 +842,9 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/index.php`,
      ```
 
 3. **Inclusión Modular Estándar**:
-   - Hojas de estilos Datatables: `include_once($rut.CONF.'1stylesDAT.php');`.
-   - Mensajes flash Toastr/SweetAlert: `include_once($rut.CONF.'0mens.php');` y `include_once($rut.CONF.'5toastr.php');`.
-   - Librerías JavaScript de Datatables: `include_once($rut.CONF.'3javaDAT.php');`.
+   * Hojas de estilos Datatables: `include_once($rut.CONF.'1stylesDAT.php');`.
+   * Mensajes flash Toastr/SweetAlert: `include_once($rut.CONF.'0mens.php');` y `include_once($rut.CONF.'5toastr.php');`.
+   * Librerías JavaScript de Datatables: `include_once($rut.CONF.'3javaDAT.php');`.
 
 ---
 
@@ -909,34 +1035,34 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/index.php`,
 ## 4.3. Desglose de Componentes de la Vista-Listado
 
 1. **Variables de Configuración al Encabezado**:
-   - `$rut`: Ruta hacia la raíz de la aplicación (ej. `'../../../'`).
-   - `$pagina`: Nombre plural del módulo para los títulos.
-   - `$singlr`: Nombre singular del recurso para botones y modales.
-   - `$action`: Nombre del script controlador en `ACTIONVQ/`.
-   - `$raiz`, `$subraiz`: Controladores booleanos de migas de pan (*breadcrumbs*).
+   * `$rut`: Ruta hacia la raíz de la aplicación (ej. `'../../../'`).
+   * `$pagina`: Nombre plural del módulo para los títulos.
+   * `$singlr`: Nombre singular del recurso para botones y modales.
+   * `$action`: Nombre del script controlador en `ACTIONVQ/`.
+   * `$raiz`, `$subraiz`: Controladores booleanos de migas de pan (*breadcrumbs*).
 
 2. **Invocación del Controlador y Carga de Datos**:
-   - Se incluye el controlador `$action`.
-   - Se invoca la función global `index($rut, $rid, $uid, $location, 'user', 1)`.
-     - `$rut`: Ruta hacia la raíz de la aplicación.
-     - `$rid`: RID del módulo.
-     - `$uid`: ID del usuario logueado.
-     - `$location`: URL de retorno.
-     - `'user'`: Nombre de la tabla. (OPCIONAL no todas las vistas, aciones y clases, lo ocupan)
-     - `1`: Número de campos de la tabla. (OPCIONAL no todas las vistas, aciones y clases, lo ocupan)
-   - Se extraen la tabla pre-generada `$data->inf` y los combos desplegables `$data->cboTipos`.
+   * Se incluye el controlador `$action`.
+   * Se invoca la función global `index($rut, $rid, $uid, $location, 'user', 1)`.
+     * `$rut`: Ruta hacia la raíz de la aplicación.
+     * `$rid`: RID del módulo.
+     * `$uid`: ID del usuario logueado.
+     * `$location`: URL de retorno.
+     * `'user'`: Nombre de la tabla. (OPCIONAL no todas las vistas, aciones y clases, lo ocupan)
+     * `1`: Número de campos de la tabla. (OPCIONAL no todas las vistas, aciones y clases, lo ocupan)
+   * Se extraen la tabla pre-generada `$data->inf` y los combos desplegables `$data->cboTipos`.
 
 3. **Renderizado de Tabla Datatable**:
-   - La tabla `<table id="example1" class="dataTable ...">` imprime directamente el HTML pre-generado de `<thead>` y `<tbody>` producido en el backend (`<?= $inf->inf; $inf->inf=null; ?>`), vaciando la propiedad inmediatamente para no saturar memoria.
+   * La tabla `<table id="example1" class="dataTable ...">` imprime directamente el HTML pre-generado de `<thead>` y `<tbody>` producido en el backend (`<?= $inf->inf; $inf->inf=null; ?>`), vaciando la propiedad inmediatamente para no saturar memoria.
 
 4. **Modal Formulario de Creación Rápida (`#nuevo`)**:
-   - Formulario que transmite datos por POST a `action="<?= ACTI.$action; ?>"`.
-   - Todos los input tienen name="[nombre_campo]" que es igual al nombre de la tabla. asi que se deben modificar de acuerdo a la tabla que se va a utilizar (revisar y buscar tabla en /database.sql).
-   - Incluye los inputs ocultos obligatorios `$rid`, `$uid` (RID y ID de usuario logueado en Base64) y `url=$location` (URL de retorno en Base64).
-   - Botón de confirmación condicionado al privilegio de escritura: `<?php if ($is_visor): ?> <button type="submit" name="nuevo">... <?php endif ?>`.
+   * Formulario que transmite datos por POST a `action="<?= ACTI.$action; ?>"`.
+   * Todos los input tienen name="[nombre_campo]" que es igual al nombre de la tabla. asi que se deben modificar de acuerdo a la tabla que se va a utilizar (revisar y buscar tabla en /database.sql).
+   * Incluye los inputs ocultos obligatorios `$rid`, `$uid` (RID y ID de usuario logueado en Base64) y `url=$location` (URL de retorno en Base64).
+   * Botón de confirmación condicionado al privilegio de escritura: `<?php if ($is_visor): ?> <button type="submit" name="nuevo">... <?php endif ?>`.
 
 5. **Limpieza Final de Sesión**:
-   - Al pie del documento se desasignan las variables temporales de estado y errores (`unset($_SESSION['stat'])`) para que los mensajes Toastr no se repitan al recargar la pantalla.
+   * Al pie del documento se desasignan las variables temporales de estado y errores (`unset($_SESSION['stat'])`) para que los mensajes Toastr no se repitan al recargar la pantalla.
 
 ---
 
@@ -951,8 +1077,9 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/detalle/ind
 ## 5.1. Reglas Fundamentales de Arquitectura en Vistas-Detalle
 
 1. **Separación Modular (Maqueta y Formulario)**:
-   - La maqueta principal de detalle se ubica en `home/{modulo}/{tabla}/detalle/index.php`.
-   - El formulario HTML de edición se incluye de forma modular mediante (solo para módulos que serán llamados desde varios otros módulos, de lo contrario se define en la misma vista):
+   * La maqueta principal de detalle se ubica en `home/{modulo}/{tabla}/detalle/index.php`.
+   * El formulario HTML de edición se incluye de forma modular mediante (solo para módulos que serán llamados desde varios otros módulos, de lo contrario se define en la misma vista):
+
      ```php
      <?php include_once($rut.VIEWS.'detail_user.php'); ?>
      ```
@@ -961,9 +1088,11 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/detalle/ind
    No existen bucles en la vista de detalle. Los atributos del registro se acceden como propiedades directas del objeto `$call` retornado por la base de datos (ej. `$call->nombres_u`, `$call->status`).
 
 3. **Verificación Defensiva de Datos en Backend**:
-   - En la sección `<head>` de `detalle/index.php` se ejecuta la función `detalle()` del controlador.
-   - Se aplica validación estricta antes de renderizar el formulario:
+   * En la sección `<head>` de `detalle/index.php` se ejecuta la función `detalle()` del controlador.
+   * Se aplica validación estricta antes de renderizar el formulario:
+
      ```php
+
     //--------------------------------------
     require_once($rut.DIRACT.$action);
     $data = detalle($rut,$rid,$uid,$pid,'user');
@@ -974,6 +1103,7 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/detalle/ind
          header("Location: ".$rut2);
          exit();
      }
+
      ```
    - Los parámetros de la función `detalle()` son: 
         `$rut`,
@@ -983,7 +1113,8 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/detalle/ind
         `$vista` (si el módulo será llamado desde varios otros módulos, de lo contrario no va)
 
 4. **Autoselección de Desplegables con JavaScript (Select2 / jQuery)**:
-   - Al pie de la maqueta `detalle/index.php`, se incluye un bloque `<script>` que establece los valores seleccionados de los campos `<select>` utilizando la información de `$call`:
+   * Al pie de la maqueta `detalle/index.php`, se incluye un bloque `<script>` que establece los valores seleccionados de los campos `<select>` utilizando la información de `$call`:
+
      ```javascript
      $(document).ready(function(){
          $('#id_tipo').val('<?= base64_encode($call->id_tipo); ?>').trigger('change.select2');
@@ -1197,17 +1328,17 @@ Tomando como base la vista prototipo `sistema/home/ACSG3QLY/usuarios/detalle/ind
 ## 5.4. Desglose de Componentes de la Vista-Detalle
 
 1. **Campos Ocultos Obligatorios para la Edición**:
-   - `name="pass"`: Contraseña hash actual codificada en doble Base64.
-   - `name="pid"`: Llave primaria (PK) del registro codificada en Base64.
-   - `name="uid"`: ID del usuario logueado codificado en Base64.
-   - `name="url"`: URL de retorno codificada en Base64 (`$location`).
-   - `name="foto_u_actual"`: Nombre del archivo de imagen actual guardado en el servidor.
+   * `name="pass"`: Contraseña hash actual codificada en doble Base64.
+   * `name="pid"`: Llave primaria (PK) del registro codificada en Base64.
+   * `name="uid"`: ID del usuario logueado codificado en Base64.
+   * `name="url"`: URL de retorno codificada en Base64 (`$location`).
+   * `name="foto_u_actual"`: Nombre del archivo de imagen actual guardado en el servidor.
 
 2. **Formulario POST**:
-   - Apunta a `action="<?= ACTI.$action; ?>"`.
-   - Incluye `enctype="multipart/form-data"` para permitir la subida de archivos adjuntos.
-   - Todos los inputs llevan de `name="[campo]"` el nombre exacto de la columna en la BD.
-   - Botón submit con `name="editar"` condicionado a permisos de edición: `<?php if ($is_visor): ?>`.
+   * Apunta a `action="<?= ACTI.$action; ?>"`.
+   * Incluye `enctype="multipart/form-data"` para permitir la subida de archivos adjuntos.
+   * Todos los inputs llevan de `name="[campo]"` el nombre exacto de la columna en la BD.
+   * Botón submit con `name="editar"` condicionado a permisos de edición: `<?php if ($is_visor): ?>`.
 
 ---
 
@@ -1220,23 +1351,25 @@ Las Vistas-Nuevo (ubicadas en `home/{modulo}/{tabla}/nuevo/index.php`) represent
 ## 6.1. Reglas Fundamentales de Arquitectura en Vistas-Nuevo
 
 1. **Invocación de la Función `nuevo()` del Controlador**:
-   - En el encabezado `<head>` de la vista se requiere el archivo de la Acción `$action` e invoca la función global `nuevo()`:
+   * En el encabezado `<head>` de la vista se requiere el archivo de la Acción `$action` e invoca la función global `nuevo()`:
+
      ```php
      //--------------------------------------
      require_once($rut.DIRACT.$action);
      $data = nuevo($rut, $rid, $uid, $location);
      //--------------------------------------
      ```
-   - Parámetros de la función `nuevo()`: `$rut`, `$rid`, `$uid`, `$location` (y opcionalmente `$vista` si aplica).
+
+   * Parámetros de la función `nuevo()`: `$rut`, `$rid`, `$uid`, `$location` (y opcionalmente `$vista` si aplica).
 
 2. **PROHIBICIÓN TOTAL DE BUCLES EN LA VISTA**:
-   - Queda totalmente prohibido el uso de bucles (`while`, `foreach`, `for`) en el marcado HTML de la vista.
-   - Todos los selectores desplegables, opciones y listados sugeridos vienen pre-generados desde el backend dentro del objeto `$data` (ej. `$data->cboClientes`, `$data->cboProductos`).
+   * Queda totalmente prohibido el uso de bucles (`while`, `foreach`, `for`) en el marcado HTML de la vista.
+   * Todos los selectores desplegables, opciones y listados sugeridos vienen pre-generados desde el backend dentro del objeto `$data` (ej. `$data->cboClientes`, `$data->cboProductos`).
 
 3. **Interacción Dinámica AJAX para Tablas Temporales de Detalle**:
-   - Para módulos con ítems o detalles dinámicos (ej. productos en una Cotización o Pedido), la vista implementa un script en JavaScript/jQuery que realiza llamadas asíncronas `$.ajax()` hacia los eventos `consulta` o `buscar` del controlador `ACTI.$action`.
-   - La respuesta JSON permite consultar en tiempo real precios, stock o descripciones del producto seleccionado y agregarlo dinámicamente a una tabla temporal en el DOM (`<table id="tbl_items">`).
-   - Cada fila agregada incluye inputs ocultos tipo array (`name="prod_id[]"`, `name="cant[]"`, `name="precio[]"`, `name="subtotal[]"`) para que al presionar enviar (`name="nuevo"`), el servidor reciba la cabecera y todo el detalle del registro en una sola transacción.
+   * Para módulos con ítems o detalles dinámicos (ej. productos en una Cotización o Pedido), la vista implementa un script en JavaScript/jQuery que realiza llamadas asíncronas `$.ajax()` hacia los eventos `consulta` o `buscar` del controlador `ACTI.$action`.
+   * La respuesta JSON permite consultar en tiempo real precios, stock o descripciones del producto seleccionado y agregarlo dinámicamente a una tabla temporal en el DOM (`<table id="tbl_items">`).
+   * Cada fila agregada incluye inputs ocultos tipo array (`name="prod_id[]"`, `name="cant[]"`, `name="precio[]"`, `name="subtotal[]"`) para que al presionar enviar (`name="nuevo"`), el servidor reciba la cabecera y todo el detalle del registro en una sola transacción.
 
 ---
 
@@ -1494,16 +1627,15 @@ Las Vistas-Nuevo (ubicadas en `home/{modulo}/{tabla}/nuevo/index.php`) represent
 ## 6.3. Desglose de Componentes de la Vista-Nuevo con AJAX
 
 1. **Consulta Asíncrona AJAX a los Handlers del Controlador**:
-   - Peticiones enviadas a `action="<?= ACTI.$action; ?>"` invocando el evento `buscar` o `consulta`.
-   - Permite traer dinámicamente precios, unidades de medida o stock del servidor sin recargar la página.
+   * Peticiones enviadas a `action="<?= ACTI.$action; ?>"` invocando el evento `buscar` o `consulta`.
+   * Permite traer dinámicamente precios, unidades de medida o stock del servidor sin recargar la página.
 
 2. **Manipulación del DOM y Tabla Temporal (`#tbl_items`)**:
-   - Al hacer clic en `#btn_agregar`, JavaScript genera dinámicamente filas HTML `<tr>` que se concatenan en `#tbody_items`.
-   - Cada fila genera inputs ocultos tipo array (`name="prod_id[]"`, `name="cant[]"`, `name="precio[]"`, `name="subtotal[]"`).
+   * Al hacer clic en `#btn_agregar`, JavaScript genera dinámicamente filas HTML `<tr>` que se concatenan en `#tbody_items`.
+   * Cada fila genera inputs ocultos tipo array (`name="prod_id[]"`, `name="cant[]"`, `name="precio[]"`, `name="subtotal[]"`).
 
 3. **Recepción en Controlador Backend**:
-   - Al enviar el formulario con `name="nuevo"`, el controlador procesa los arreglos `$_POST['prod_id']`, `$_POST['cant']`, etc. mediante un bucle de inserción en la tabla detalle de la base de datos (ej. `db_add_all`).
+   * Al enviar el formulario con `name="nuevo"`, el controlador procesa los arreglos `$_POST['prod_id']`, `$_POST['cant']`, etc. mediante un bucle de inserción en la tabla detalle de la base de datos (ej. `db_add_all`).
 
 4. **Limpieza Final de Sesiones**:
-   - `unset($_SESSION['stat'])`, `unset($_SESSION['error'])`, `unset($_SESSION['Mysqli_Error'])` al pie del documento.
-
+   * `unset($_SESSION['stat'])`, `unset($_SESSION['error'])`, `unset($_SESSION['Mysqli_Error'])` al pie del documento.
