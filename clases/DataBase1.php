@@ -194,11 +194,11 @@
 							$_name = 'vac3';//nombre de otra base de datos
 						break;
 						default:
-							$_host = $this->$name;
-							$_port = $this->db_port;
-							$_user = $this->$user;
-							$_pass = $this->$pass;
-							$_name = $this->$base;
+							$_host = isset($this->$name) ? $this->$name : (defined('DB_HOST') ? DB_HOST : 'localhost');
+							$_port = isset($this->db_port) ? $this->db_port : 3306;
+							$_user = isset($this->$user) ? $this->$user : (defined('DB_USER') ? DB_USER : 'root');
+							$_pass = isset($this->$pass) ? $this->$pass : (defined('DB_PASS') ? DB_PASS : '');
+							$_name = isset($this->$base) ? $this->$base : (defined('DB_NAME') ? DB_NAME : '');
 						break;
 					}
 				//----------------------------------
@@ -276,11 +276,15 @@
 								die("Error SSL Connect: " . mysqli_connect_error());
 							}
 						} else {
-							$con = $fc_conec($_host, $_user, $_pass, $_name, $_port) OR die("{$_host} - {$_user} - {$_pass} - {$_name} - {$_port}");
-							// Selección de DB procedimental
-							//$db_seldb($con, $_name);
-							// CORRECCIÓN: Usamos la variable de función, no el método de objeto
-							$db_encod($con, "utf8");
+							try {
+								$con = @$fc_conec($_host, $_user, $_pass, $_name, $_port);
+								if ($con) {
+									$db_encod($con, "utf8");
+								}
+							} catch (Throwable $e) {
+								error_log("DB Connect Error: " . $e->getMessage());
+								return false;
+							}
 						}
 					break;
 				}
@@ -456,9 +460,14 @@
 						}
 					break;
 					default: // MySQLi / PostgreSQL
-						$res = @$fc_query($_cc, $sql);
-						if (!$res) {
-							$data->error = $fc_error($_cc);
+						try {
+							$res = @$fc_query($_cc, $sql);
+						} catch (Throwable $e) {
+							$res = false;
+							$data->error = $e->getMessage();
+						}
+						if (!$res && empty($data->error)) {
+							$data->error = is_callable($fc_error) ? $fc_error($_cc) : 'Error en consulta SQL';
 						}
 					break;
 				}
@@ -586,9 +595,14 @@
 						}
 					break;
 					default: // MySQLi / PostgreSQL
-						$res = @$fc_query($_cc, $sql);
-						if (!$res) {
-							$data->error = $fc_error($_cc);
+						try {
+							$res = @$fc_query($_cc, $sql);
+						} catch (Throwable $e) {
+							$res = false;
+							$data->error = $e->getMessage();
+						}
+						if (!$res && empty($data->error)) {
+							$data->error = is_callable($fc_error) ? $fc_error($_cc) : 'Error en consulta SQL';
 						}
 					break;
 				}
@@ -696,29 +710,37 @@
 			}
 		//---------------------------------------------------------UTILIDADES
 			function validarTurnstile($token) {
-				// FUNCIÓN PARA VERIFICAR EL TOKEN DE TURNSTILE
-				$turnstile_verify_url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+				// FUNCIÓN PARA VERIFICAR EL TOKEN DE CLOUDFLARE TURNSTILE (OPTIMIZADA)
+				if (empty($token)) {
+					$res = new stdClass();
+					$res->success = false;
+					$res->message = 'Token de verificación vacío';
+					return $res;
+				}
 				//---------------------------------------------------------
-				// Datos que se enviarán a Cloudflare para la verificación
+				$turnstile_verify_url = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+				$secret = defined('TURNSTILE_SECRET_KEY') ? TURNSTILE_SECRET_KEY : (defined('TURSTILE_SECRET_KEY') ? TURSTILE_SECRET_KEY : '');
+				$remote_ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
+				//---------------------------------------------------------
 				$post_data = http_build_query([
-					'secret'   => TURNSTILE_SECRET_KEY,
+					'secret'   => $secret,
 					'response' => $token,
-					'remoteip' => $_SERVER['REMOTE_ADDR'] // IP del usuario
+					'remoteip' => $remote_ip
 				]);
 				//---------------------------------------------------------
-				// Usamos cURL para hacer la petición POST a Cloudflare
 				$ch = curl_init();
 				curl_setopt($ch, CURLOPT_URL, $turnstile_verify_url);
 				curl_setopt($ch, CURLOPT_POST, 1);
 				curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 				curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
 				//---------------------------------------------------------
 				$response = curl_exec($ch);
-				//curl_close($ch);
+				curl_close($ch);
 				//---------------------------------------------------------
-				// Decodificamos la respuesta JSON de Cloudflare
-				return json_decode($response);
+				$dec = json_decode($response);
+				return $dec ?: (object)['success' => false, 'message' => 'Error de conexión con Cloudflare'];
 			}
 			public function cal_fecha($fecha){
 				if (is_null($fecha)) {
@@ -1074,19 +1096,36 @@
 				return $str;
 			}
 			public function custom_escape_string($value) {
-				if (is_null($value)) return null;
+				if ($value === null) {
+					return '';
+				}
+				if (is_array($value)) {
+					return '';
+				}
+				// Eliminar bytes nulos (seguridad contra Null-byte injection)
+				$value = str_replace(chr(0), '', (string)$value);
 				// Paso 1: Decodificar entidades HTML (&amp;, &lt;, etc.)
-				$value = html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
+				$value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
 				//---------------------------------------------------------
-				// Paso 2: Eliminar etiquetas HTML y PHP potencialmente peligrosas
+				// Paso 2: Eliminar etiquetas HTML y PHP
 				$value = strip_tags($value);
 				//---------------------------------------------------------
-				// Paso 3: Escapar comillas y barras invertidas para evitar inyecciones SQL en consultas
-				$escaped = str_replace(['\\', "'"], ['\\\\', "''"], $value);
+				// Paso 3: Convertir caracteres especiales a entidades HTML
+				$_temp = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+				// Paso 4: Escapar comillas para consultas SQL seguras
+				$_temp = addslashes($_temp);
 				//---------------------------------------------------------
-				return $escaped;
+				return $_temp;
 			}
-			public function calc_cod_txt($pid,$largo=11) {
+			public 			function calc_codigo($pid, $largo = 11) {
+				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo en 1 línea
+				// Rellena con '0' a la izquierda hasta llegar a longitud $largo
+				//-----------------------------------
+				$pid = intval($pid);
+				return str_pad($pid, $largo, '0', STR_PAD_LEFT);
+			}
+			//---------------------------------------------------------
+function calc_cod_txt($pid,$largo=11) {
 				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo tu switch en 1 línea
 				// Rellena con '0' a la izquierda hasta llegar a longitud 11 (según tu lógica original)
 				return str_pad($pid, $largo, '0', STR_PAD_LEFT);
