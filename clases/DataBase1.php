@@ -1117,7 +1117,7 @@
 				//---------------------------------------------------------
 				return $_temp;
 			}
-			public 			function calc_codigo($pid, $largo = 11) {
+			public function calc_codigo($pid, $largo = 11) {
 				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo en 1 línea
 				// Rellena con '0' a la izquierda hasta llegar a longitud $largo
 				//-----------------------------------
@@ -1125,7 +1125,7 @@
 				return str_pad($pid, $largo, '0', STR_PAD_LEFT);
 			}
 			//---------------------------------------------------------
-function calc_cod_txt($pid,$largo=11) {
+			public function calc_cod_txt($pid,$largo=11) {
 				// ¡OPTIMIZACIÓN MASIVA! - str_pad hace todo tu switch en 1 línea
 				// Rellena con '0' a la izquierda hasta llegar a longitud 11 (según tu lógica original)
 				return str_pad($pid, $largo, '0', STR_PAD_LEFT);
