@@ -1639,3 +1639,211 @@ Las Vistas-Nuevo (ubicadas en `home/{modulo}/{tabla}/nuevo/index.php`) represent
 
 4. **Limpieza Final de Sesiones**:
    * `unset($_SESSION['stat'])`, `unset($_SESSION['error'])`, `unset($_SESSION['Mysqli_Error'])` al pie del documento.
+
+---
+
+# 7. METODOLOGÍA VAC 2.0: Paginación y Búsqueda Server-Side en DataTables con AJAX
+
+Para vistas con tablas de alto volumen de datos (desde miles hasta cientos de miles de registros, ej. `mant_citas`, `mantenimientos`, `siniestros`, `sini_ref_oc`), la carga síncrona clásica mediante `listar()` genera bloqueos en el navegador, timeouts HTTP o sobrecarga de memoria en PHP/DOM.
+
+La **Metodología VAC 2.0** estandariza la carga asíncrona mediante **DataTables Server-Side AJAX**, delegando la paginación (`LIMIT` / `OFFSET`), el ordenamiento dinámico y el filtrado en tiempo real al motor de base de datos.
+
+---
+
+## 7.1. Estándar de Implementación en la Vista (`home/*/*/index.php`)
+
+### 1. Marcado HTML de la Tabla
+
+Se estandariza el identificador universal `id="tbl_dt_ajax"`, reemplazando el volcado síncrono del `<tbody>` por un cuerpo vacío que DataTables llenará por AJAX:
+
+```html
+<table id="tbl_dt_ajax" class="table table-bordered table-striped table-hover text-center" style="width:100%">
+    <thead class="bg-primary text-white">
+        <tr>
+            <th>#</th>
+            <th>Acciones</th>
+            <!-- Columnas del módulo -->
+            <th>Estado</th>
+            <th>Fecha</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Filas renderizadas dinámicamente vía AJAX Server-Side -->
+    </tbody>
+</table>
+```
+
+### 2. Inicialización JavaScript de DataTables
+
+Se utiliza la bandera universal `d.dt_ajax = true` enviada vía POST al controlador de acción:
+
+```javascript
+$(document).ready(function() {
+    $('#tbl_dt_ajax').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: false,
+        pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        order: [[0, 'desc']], // Orden inicial por columna principal
+        ajax: {
+            url: "<?= ACTI.$action; ?>",
+            type: "POST",
+            data: function(d) {
+                d.dt_ajax = true; // Parámetro universal VAC 2.0
+            }
+        },
+        language: {
+            processing:     "Procesando...",
+            search:         "Buscar:",
+            lengthMenu:     "Mostrar _MENU_ registros",
+            info:           "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+            infoEmpty:      "Mostrando registros del 0 al 0 de un total de 0 registros",
+            infoFiltered:   "(filtrado de un total de _MAX_ registros)",
+            loadingRecords: "Cargando...",
+            zeroRecords:    "No se encontraron resultados",
+            emptyTable:     "Ningún dato disponible en esta tabla",
+            paginate: {
+                first:      "Primero",
+                previous:   "Anterior",
+                next:       "Siguiente",
+                last:       "Último"
+            }
+        }
+    });
+});
+```
+
+---
+
+## 7.2. Estándar de Implementación en el Controlador (`ACTIONVQ/*.php`)
+
+En el controlador de acción, se intercepta la petición AJAX con la bandera `dt_ajax` antes de las funciones tradicionales. **No se elimina ninguna lógica ni acción previa**:
+
+```php
+//--------------------------------------
+// VAC 2.0 - RECEPCIÓN UNIVERSAL DATATABLES SERVER-SIDE AJAX
+//--------------------------------------
+if (isset($_POST['dt_ajax'])) {
+    require_once($ru0.DIRMOR.$cls['cl1'].'.php');
+    $_cls = new $cls['cl1']();
+
+    $uid = isset($_SESSION['user_id']) ? intval($_SESSION['user_id']) : 0;
+    $rid = isset($_SESSION['tipo_id']) ? intval($_SESSION['tipo_id']) : 0;
+    $schu = defined('SCHU') ? SCHU : 'PRD';
+
+    $start     = isset($_POST['start']) ? intval($_POST['start']) : 0;
+    $length    = isset($_POST['length']) ? intval($_POST['length']) : 25;
+    $search    = (isset($_POST['search']['value']) && trim($_POST['search']['value']) !== '') ? trim($_POST['search']['value']) : null;
+    $order_col = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
+    $order_dir = (isset($_POST['order'][0]['dir']) && in_array(strtolower($_POST['order'][0]['dir']), ['asc', 'desc'])) ? strtoupper($_POST['order'][0]['dir']) : 'DESC';
+
+    $_cls->listar_server_side($rid, $uid, $schu, $start, $length, $search, $order_col, $order_dir);
+    exit;
+}
+```
+
+---
+
+## 7.3. Estándar de Implementación en el Modelo / Clase (`MORENOKU/*.php`)
+
+### Reglas Críticas del Modelo
+
+1. **Herencia directa de `DataBase`**: `class MiClase extends DataBase`.
+2. **Cero dependencias de `$c1`**: **NUNCA** recibir la cadena o recurso de conexión `$c1` por parámetro en los métodos nuevos. La clase ya hereda los métodos de base de datos (`$this->db_exec()`, `$this->connect()`, `$this->db_escape()`, etc.).
+3. **No duplicar inicializaciones de punteros en funciones internas**: Usar `$this->db_exec()` o instanciar punteros solo una vez al nivel de la función padre.
+4. **Respuesta en formato estándar DataTables**: Retornar JSON con `draw`, `recordsTotal`, `recordsFiltered` y `data` (array bidimensional con las celdas HTML exactas requeridas por cada columna).
+
+### Estructura Canónica del Método `listar_server_side(...)`
+
+```php
+function listar_server_side($rid, $uid, $schu, $start = 0, $length = 25, $search = null, $order_col = 0, $order_dir = 'DESC') {
+    $fc_query=$this->db_query;$fc_error=$this->db_error;$fc_array=$this->db_array;$fc_object=$this->db_object;$fc_assoc=$this->db_assoc;$fc_num_r=$this->db_num_r;$fc_fre_r=$this->db_fre_r;$fc_close=$this->db_close;
+
+    // 1. Mapeo de columnas para ORDER BY dinámico
+    $cols_map = [
+        0 => "c.id_registro",
+        1 => "c.id_registro",
+        2 => "c.estado",
+        3 => "c.fecha"
+    ];
+    $order_by = isset($cols_map[$order_col]) ? $cols_map[$order_col] : "c.id_registro";
+
+    // 2. Filtros de Seguridad y Permisos por Rol ($rid, $uid)
+    $where_base = " WHERE 1=1 ";
+    if (!in_array($rid, [1, 2, 13, 32, 64, 72])) {
+        // Ejemplo: roles restringidos solo ven sus registros
+        $where_base .= " AND (c.id_created = {$uid} OR c.mec_a_cargo = {$uid}) ";
+    }
+
+    // 3. Conteo Total sin Filtro de Búsqueda
+    $sql_total = "SELECT COUNT(c.id_registro) AS total FROM {$this->table} c {$where_base} ;";
+    $res_total = $this->db_exec($sql_total);
+    $recordsTotal = 0;
+    if ($res_total && $res_total->result && $res_total->cant > 0) {
+        $row_t = $fc_assoc($res_total->res);
+        $recordsTotal = intval($row_t['total']);
+        $fc_fre_r($res_total->res);
+    }
+
+    // 4. Filtro de Búsqueda Dinámica
+    $where_search = "";
+    if ($search !== null && $search !== '') {
+        $q = str_replace("'", "''", $search);
+        $where_search = " AND (c.campo_texto ILIKE '%{$q}%' OR c.placas ILIKE '%{$q}%') ";
+    }
+
+    // 5. Conteo Filtrado
+    $recordsFiltered = $recordsTotal;
+    if ($where_search !== "") {
+        $sql_filt = "SELECT COUNT(c.id_registro) AS total FROM {$this->table} c {$where_base} {$where_search} ;";
+        $res_filt = $this->db_exec($sql_filt);
+        if ($res_filt && $res_filt->result && $res_filt->cant > 0) {
+            $row_f = $fc_assoc($res_filt->res);
+            $recordsFiltered = intval($row_f['total']);
+            $fc_fre_r($res_filt->res);
+        }
+    }
+
+    // 6. Consulta Paginada
+    $start = max(0, intval($start));
+    $length = ($length > 0) ? min(100, intval($length)) : 25;
+
+    $sql_data = "SELECT c.* 
+                 FROM {$this->table} c 
+                 {$where_base} {$where_search} 
+                 ORDER BY {$order_by} {$order_dir} 
+                 LIMIT {$length} OFFSET {$start} ;";
+
+    $res_data = $this->db_exec($sql_data);
+    $data_rows = [];
+
+    if ($res_data && $res_data->result && $res_data->cant > 0) {
+        $num = $start + 1;
+        while ($row = $fc_assoc($res_data->res)) {
+            $pid = base64_encode($row['id_registro']);
+            // Renderizado de botones y celdas
+            $acciones = '<a href="'.$this->detail.$pid.'" class="btn btn-warning btn-xs"><i class="fa fa-edit"></i></a>';
+
+            $data_rows[] = [
+                $num,
+                $acciones,
+                $row['estado'],
+                $row['fecha']
+            ];
+            $num++;
+        }
+        $fc_fre_r($res_data->res);
+    }
+
+    // 7. Retorno JSON
+    header("Content-Type: application/json; charset=UTF-8;");
+    echo json_encode([
+        "draw"            => isset($_POST['draw']) ? intval($_POST['draw']) : 1,
+        "recordsTotal"    => $recordsTotal,
+        "recordsFiltered" => $recordsFiltered,
+        "data"            => $data_rows
+    ]);
+    exit;
+}
+```
